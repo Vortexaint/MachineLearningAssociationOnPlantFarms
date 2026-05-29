@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Association Rule Mining — 4LazyMen</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: #faf8f5; color: #1c1b1b; font-family: 'Montserrat', sans-serif; font-size: 15px; min-height: 100vh; }
+
+    /* NAV */
+    nav { background: #faf8f5; border-bottom: 1px solid rgba(197,160,89,0.18); position: sticky; top: 0; z-index: 100; display: flex; align-items: center; justify-content: space-between; padding: 0 40px; height: 56px; }
+    .nav-brand { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; color: #1c1b1b; letter-spacing: -0.01em; }
+    .nav-links { display: flex; gap: 4px; list-style: none; }
+    .nav-links li button { background: none; border: none; cursor: pointer; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a55; padding: 6px 18px; border-radius: 6px; transition: background 0.15s, color 0.15s; }
+    .nav-links li button:hover { background: rgba(212,175,55,0.08); color: #b8902e; }
+    .nav-links li button.active { background: rgba(212,175,55,0.12); color: #b8902e; }
+
+    /* LAYOUT */
+    .page { display: none; max-width: 860px; margin: 0 auto; padding: 48px 24px 80px; }
+    .page.visible { display: block; }
+
+    /* HOME */
+    .hero-title { font-family: 'Playfair Display', serif; font-size: 42px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; margin-bottom: 16px; }
+    .hero-sub { color: #6b6560; font-size: 15px; line-height: 1.7; max-width: 560px; margin-bottom: 40px; }
+    .model-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 40px; }
+    .model-card { background: #fff; border: 1px solid rgba(197,160,89,0.2); border-radius: 10px; padding: 20px 18px; cursor: pointer; transition: border-color 0.15s, box-shadow 0.15s; }
+    .model-card:hover { border-color: #d4af37; box-shadow: 0 4px 20px rgba(212,175,55,0.1); }
+    .mc-tag { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #a08830; background: rgba(212,175,55,0.1); border-radius: 4px; padding: 3px 8px; display: inline-block; margin-bottom: 10px; }
+    .mc-name { font-family: 'Playfair Display', serif; font-size: 16px; font-weight: 700; color: #1c1b1b; }
+    .mc-desc { font-size: 12px; color: #7a7570; margin-top: 6px; line-height: 1.5; }
+    .cta-row { display: flex; gap: 12px; flex-wrap: wrap; }
+
+    /* BUTTONS */
+    .btn-gold { background: #d4af37; color: #fff; border: none; border-radius: 8px; padding: 11px 28px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; }
+    .btn-gold:hover { background: #c09e28; }
+    .btn-gold:disabled { background: #c8b87a; cursor: not-allowed; }
+    .btn-outline { background: none; color: #d4af37; border: 1.5px solid #d4af37; border-radius: 8px; padding: 10px 28px; font-family: 'Montserrat', sans-serif; font-size: 13px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; cursor: pointer; transition: background 0.15s; }
+    .btn-outline:hover { background: rgba(212,175,55,0.07); }
+    .btn-outline:disabled { opacity: 0.5; cursor: not-allowed; }
+
+    /* CARD */
+    .card { background: #fff; border: 1px solid rgba(197,160,89,0.18); border-radius: 12px; padding: 32px; margin-bottom: 28px; }
+    .card-title { font-family: 'Playfair Display', serif; font-size: 22px; font-weight: 700; margin-bottom: 24px; color: #1c1b1b; }
+
+    /* FORM */
+    .form-group { margin-bottom: 20px; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    .form-label { display: block; font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a55; margin-bottom: 7px; }
+    .form-label small { font-size: 10px; font-weight: 400; text-transform: none; letter-spacing: 0; color: #a09080; }
+    .form-select, .form-input { width: 100%; border: none; border-bottom: 1.5px solid #e2ddd6; background: none; padding: 9px 0; font-family: 'Montserrat', sans-serif; font-size: 15px; color: #1c1b1b; outline: none; transition: border-color 0.15s; }
+    .form-select { appearance: none; -webkit-appearance: none; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23a08830' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 4px center; padding-right: 24px; }
+    .form-select:focus, .form-input:focus { border-bottom-color: #d4af37; }
+    .form-select option { color: #1c1b1b; background: #fff; }
+
+    /* DYNAMIC INPUTS per dataset */
+    .ds-inputs { margin-top: 24px; padding-top: 24px; border-top: 1px solid rgba(197,160,89,0.12); }
+    .ds-inputs-title { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a55; margin-bottom: 16px; }
+    .ds-hint { font-size: 12px; color: #9a8a65; margin-bottom: 16px; line-height: 1.6; background: rgba(212,175,55,0.06); border-radius: 6px; padding: 10px 14px; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .tag-btn { border: 1.5px solid rgba(197,160,89,0.35); background: #fff; border-radius: 20px; padding: 5px 14px; font-family: 'Montserrat', sans-serif; font-size: 12px; font-weight: 500; color: #7a6a45; cursor: pointer; transition: all 0.15s; user-select: none; }
+    .tag-btn:hover { border-color: #d4af37; color: #a08830; }
+    .tag-btn.selected { background: rgba(212,175,55,0.15); border-color: #d4af37; color: #8a6e1a; font-weight: 600; }
+    .selected-tags { min-height: 32px; margin-bottom: 12px; }
+    .selected-tag { display: inline-flex; align-items: center; gap: 6px; background: rgba(212,175,55,0.12); border: 1px solid rgba(212,175,55,0.3); border-radius: 4px; padding: 4px 10px; font-size: 12px; font-weight: 600; color: #7a5e10; margin: 0 4px 4px 0; }
+    .selected-tag button { background: none; border: none; cursor: pointer; font-size: 14px; color: #a08830; line-height: 1; padding: 0; }
+
+    /* RESULT */
+    .result-box { background: #fdfaf5; border: 1px solid rgba(212,175,55,0.2); border-radius: 10px; padding: 24px; display: none; }
+    .result-box.visible { display: block; }
+    .result-chip { font-size: 11px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #a08830; background: rgba(212,175,55,0.12); border-radius: 4px; padding: 3px 10px; display: inline-block; margin-bottom: 14px; }
+    .result-title { font-family: 'Playfair Display', serif; font-size: 18px; font-weight: 700; margin-bottom: 16px; }
+    .prediction-banner { background: linear-gradient(135deg, rgba(212,175,55,0.1), rgba(212,175,55,0.05)); border: 1.5px solid rgba(212,175,55,0.3); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+    .prediction-arrow { font-size: 12px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #a08830; }
+    .prediction-value { font-family: 'Playfair Display', serif; font-size: 24px; font-weight: 700; color: #1c1b1b; margin: 6px 0 0; }
+    .metric-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; margin-bottom: 20px; }
+    .metric-tile { background: #fff; border: 1px solid rgba(197,160,89,0.15); border-radius: 8px; padding: 14px 16px; }
+    .metric-label { font-size: 11px; color: #8a7a55; font-weight: 600; text-transform: uppercase; letter-spacing: 0.07em; margin-bottom: 4px; }
+    .metric-value { font-size: 22px; font-weight: 600; color: #1c1b1b; }
+    .rules-list { list-style: none; }
+    .rules-list li { padding: 10px 14px; border-radius: 6px; background: #fff; border: 1px solid rgba(197,160,89,0.12); margin-bottom: 8px; font-size: 13px; color: #3a3530; line-height: 1.55; }
+    .rules-list li .conf { font-size: 11px; font-weight: 600; color: #a08830; margin-left: 8px; background: rgba(212,175,55,0.1); padding: 2px 7px; border-radius: 3px; }
+
+    /* COMPARE TABLE */
+    .compare-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    .compare-table th { text-align: left; padding: 10px 14px; border-bottom: 1.5px solid rgba(197,160,89,0.25); font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: #8a7a55; }
+    .compare-table td { padding: 12px 14px; border-bottom: 1px solid rgba(197,160,89,0.1); color: #2a2520; vertical-align: top; }
+    .compare-table tr:last-child td { border-bottom: none; }
+    .compare-table tr:hover td { background: rgba(212,175,55,0.03); }
+    .best-badge { display: inline-block; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; background: rgba(212,175,55,0.15); color: #8a6e1a; border-radius: 4px; padding: 2px 7px; margin-left: 6px; vertical-align: middle; }
+
+    /* PREDICT PAGE */
+    .predict-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 640px) { .predict-grid { grid-template-columns: 1fr; } .form-row { grid-template-columns: 1fr; } }
+
+    .loading-dots::after { content: '...'; animation: dots 1.2s steps(4, end) infinite; }
+    @keyframes dots { 0%,20%{content:''} 40%{content:'.'} 60%{content:'..'} 80%,100%{content:'...'} }
+    .no-match-msg { color: #c07030; font-size: 14px; }
+    .err-msg { color: #c0392b; font-size: 14px; }
+  </style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-brand">4LazyMen</span>
+  <ul class="nav-links">
+    <li><button onclick="showPage('home')" id="nav-home" class="active">Home</button></li>
+    <li><button onclick="showPage('predict')" id="nav-predict">Simulasi</button></li>
+    <li><button onclick="showPage('analysis')" id="nav-analysis">Analysis</button></li>
+    <li><button onclick="showPage('compare')" id="nav-compare">Compare</button></li>
+  </ul>
+</nav>
+
+<!-- HOME -->
+<div class="page visible" id="page-home">
+  <h1 class="hero-title">Association Rule<br>Mining Suite</h1>
+  <p class="hero-sub">Pilih dataset, pilih model, dan jalankan analisis. Atau gunakan halaman Simulasi untuk uji input manual dan lihat prediksi langsung dari setiap model.</p>
+  <div class="model-grid">
+    <div class="model-card" onclick="goAnalysis('Apriori')">
+      <span class="mc-tag">Classic</span>
+      <div class="mc-name">Apriori</div>
+      <div class="mc-desc">Frequent itemset mining dengan candidate generation</div>
+    </div>
+    <div class="model-card" onclick="goAnalysis('AprioriTid')">
+      <span class="mc-tag">Optimized</span>
+      <div class="mc-name">AprioriTid</div>
+      <div class="mc-desc">Apriori berbasis TID-list untuk dataset besar</div>
+    </div>
+    <div class="model-card" onclick="goAnalysis('AgrawalImielinskiSwami')">
+      <span class="mc-tag">AIS</span>
+      <div class="mc-name">AIS Algorithm</div>
+      <div class="mc-desc">Algoritma Agrawal-Imielinski-Swami (1993)</div>
+    </div>
+    <div class="model-card" onclick="goAnalysis('SetOrientedMining')">
+      <span class="mc-tag">Set-Based</span>
+      <div class="mc-name">Set-Oriented</div>
+      <div class="mc-desc">Mining berbasis set equivalence class</div>
+    </div>
+  </div>
+  <div class="cta-row">
+    <button class="btn-gold" onclick="showPage('predict')">Simulasi Input Manual</button>
+    <button class="btn-outline" onclick="showPage('analysis')">Analisis Dataset</button>
+    <button class="btn-outline" onclick="showPage('compare')">Bandingkan Model</button>
+  </div>
+</div>
+
+<!-- SIMULASI / PREDICT -->
+<div class="page" id="page-predict">
+  <div class="card">
+    <h2 class="card-title">Simulasi Prediksi — Input Manual</h2>
+    <p style="font-size:13px;color:#7a6a55;margin-bottom:24px;line-height:1.6;">
+      Masukkan kondisi secara manual, lalu lihat prediksi dari model yang dipilih. Format interval otomatis menyesuaikan model:<br>
+      <strong>AIS</strong> → <code style="font-size:12px;background:#f5f0e8;padding:1px 5px;border-radius:3px;">_L / _M / _H</code> &nbsp;|&nbsp;
+      <strong>Apriori</strong> → <code style="font-size:12px;background:#f5f0e8;padding:1px 5px;border-radius:3px;">_HIGH / _LOW</code> &nbsp;|&nbsp;
+      <strong>AprioriTid</strong> → <code style="font-size:12px;background:#f5f0e8;padding:1px 5px;border-radius:3px;">_H / _L</code> &nbsp;|&nbsp;
+      <strong>Set-Oriented</strong> → <code style="font-size:12px;background:#f5f0e8;padding:1px 5px;border-radius:3px;">_HIGH / _LOW</code>
+      <span style="font-size:11px;color:#9a8a65;display:block;margin-top:4px;">⚠️ AprioriTid memakai TID co-occurrence scoring. &nbsp;Set-Oriented Mining menggunakan SQLite in-memory dengan antecedent tunggal.</span>
+    </p>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label class="form-label" for="pred-dataset">Dataset</label>
+        <select class="form-select" id="pred-dataset" onchange="updatePredictInputs()">
+          <option value="Dataset1">Dataset 1 — Rice Leaf Disease</option>
+          <option value="Dataset2">Dataset 2 — Plant Growth</option>
+          <option value="Dataset3">Dataset 3 — Agriculture &amp; Farming</option>
+          <option value="Dataset4">Dataset 4 — Agricultural Heritage</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label" for="pred-model">Model</label>
+        <select class="form-select" id="pred-model" onchange="updatePredictInputs()">
+          <option value="AgrawalImielinskiSwami">AIS (Agrawal-Imielinski-Swami)</option>
+          <option value="Apriori">Apriori</option>
+          <option value="AprioriTid">AprioriTid</option>
+          <option value="SetOrientedMining">Set-Oriented Mining</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="ds-inputs" id="pred-dynamic-inputs"></div>
+
+    <!-- IMAGE INPUT — hanya tampil saat Dataset 1 dipilih -->
+    <div id="image-input-section" style="display:none; margin-top:24px; padding-top:24px; border-top:1px solid rgba(197,160,89,0.12);">
+      <div class="ds-inputs-title">📷 Input Gambar Daun Padi</div>
+      <p class="ds-hint">Upload foto daun padi atau ambil langsung via kamera untuk ekstraksi fitur otomatis (R/G/B mean &amp; std).</p>
+
+      <!-- Tab switcher -->
+      <div style="display:flex; gap:8px; margin-bottom:16px;">
+        <button class="tag-btn selected" id="tab-file" onclick="switchImageTab('file')">📁 Upload File</button>
+        <button class="tag-btn" id="tab-camera" onclick="switchImageTab('camera')">📷 Kamera</button>
+      </div>
+
+      <!-- Upload file -->
+      <div id="img-tab-file">
+        <label for="img-file-input" style="display:block; cursor:pointer;">
+          <div id="img-drop-zone" style="border:2px dashed rgba(197,160,89,0.4); border-radius:10px; padding:28px 20px; text-align:center; background:rgba(212,175,55,0.03); transition:border-color 0.15s;">
+            <div style="font-size:28px; margin-bottom:8px;">🌿</div>
+            <div style="font-size:13px; color:#8a7a55; font-weight:600;">Klik atau drag &amp; drop gambar di sini</div>
+            <div style="font-size:11px; color:#a09080; margin-top:4px;">JPG, PNG, JPEG</div>
+          </div>
+        </label>
+        <input type="file" id="img-file-input" accept="image/*" style="display:none;" onchange="handleFileSelect(event)">
+      </div>
+
+      <!-- Kamera -->
+      <div id="img-tab-camera" style="display:none;">
+        <div style="position:relative; border-radius:10px; overflow:hidden; background:#000; max-width:400px;">
+          <video id="camera-video" autoplay playsinline style="width:100%; display:block; border-radius:10px;"></video>
+          <canvas id="camera-canvas" style="display:none;"></canvas>
+        </div>
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button class="btn-gold" id="btn-start-cam" onclick="startCamera()">Aktifkan Kamera</button>
+          <button class="btn-outline" id="btn-capture" onclick="capturePhoto()" style="display:none;">📸 Ambil Foto</button>
+          <button class="btn-outline" id="btn-stop-cam" onclick="stopCamera()" style="display:none;">Matikan</button>
+        </div>
+      </div>
+
+      <!-- Preview gambar terpilih -->
+      <div id="img-preview-wrap" style="display:none; margin-top:14px; display:flex; align-items:flex-start; gap:14px; flex-wrap:wrap;">
+        <img id="img-preview" style="width:96px; height:96px; object-fit:cover; border-radius:8px; border:1px solid rgba(197,160,89,0.3);">
+        <div style="flex:1; min-width:160px;">
+          <div id="img-preview-name" style="font-size:12px; font-weight:600; color:#7a6a45; margin-bottom:6px;"></div>
+          <div id="img-feat-display" style="font-size:11px; color:#9a8a70; line-height:1.8;"></div>
+        </div>
+      </div>
+
+      <!-- Tombol prediksi gambar -->
+      <div style="margin-top:16px;">
+        <button class="btn-gold" id="btn-predict-img" onclick="runImagePredict()" disabled>🔍 Prediksi dari Gambar</button>
+        <button class="btn-outline" onclick="clearImage()" style="margin-left:10px;">Hapus Gambar</button>
+      </div>
+    </div>
+
+    <div style="margin-top:20px;">
+      <div class="form-group">
+        <label class="form-label">Kondisi Terpilih <small>(klik tag di atas untuk pilih/hapus)</small></label>
+        <div class="selected-tags" id="selected-tags-display"></div>
+      </div>
+      <button class="btn-gold" id="btn-predict" onclick="runPredict()">Prediksi</button>
+      <button class="btn-outline" onclick="clearTags()" style="margin-left:10px;">Reset</button>
+    </div>
+  </div>
+
+  <div class="result-box" id="pred-result-box">
+    <span class="result-chip">Hasil Prediksi</span>
+    <h3 class="result-title" id="pred-result-title"></h3>
+    <div id="pred-prediction-area"></div>
+    <div class="metric-grid" id="pred-metric-grid"></div>
+    <div id="pred-rules-section"></div>
+  </div>
+</div>
+
+<!-- ANALYSIS -->
+<div class="page" id="page-analysis">
+  <div class="card">
+    <h2 class="card-title">Single Model Analysis</h2>
+    <div class="form-group">
+      <label class="form-label" for="dataset">Dataset</label>
+      <select class="form-select" id="dataset">
+        <option value="Dataset1">Dataset 1 — Rice Leaf Disease</option>
+        <option value="Dataset2">Dataset 2 — Plant Growth</option>
+        <option value="Dataset3">Dataset 3 — Agriculture &amp; Farming</option>
+        <option value="Dataset4">Dataset 4 — Agricultural Heritage</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="model">Model</label>
+      <select class="form-select" id="model">
+        <option value="Apriori">Apriori</option>
+        <option value="AprioriTid">AprioriTid</option>
+        <option value="AgrawalImielinskiSwami">AIS (Agrawal-Imielinski-Swami)</option>
+        <option value="SetOrientedMining">Set-Oriented Mining</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="target">Target Column <small>(opsional — default otomatis per dataset)</small></label>
+      <input class="form-input" id="target" placeholder="Misal: Disease, Growth_Milestone, Crop_Yield" />
+    </div>
+    <button class="btn-gold" id="btn-analyze" onclick="analyze()" style="margin-top:8px;">Analyze</button>
+  </div>
+  <div class="result-box" id="result-box">
+    <span class="result-chip">Result</span>
+    <h3 class="result-title" id="result-title">Summary</h3>
+    <div class="metric-grid" id="metric-grid"></div>
+    <div id="rules-section"></div>
+  </div>
+</div>
+
+<!-- COMPARE -->
+<div class="page" id="page-compare">
+  <div class="card">
+    <h2 class="card-title">Perbandingan 4 Model</h2>
+    <div class="form-group">
+      <label class="form-label" for="compare-dataset">Dataset</label>
+      <select class="form-select" id="compare-dataset">
+        <option value="Dataset1">Dataset 1 — Rice Leaf Disease</option>
+        <option value="Dataset2">Dataset 2 — Plant Growth</option>
+        <option value="Dataset3">Dataset 3 — Agriculture &amp; Farming</option>
+        <option value="Dataset4">Dataset 4 — Agricultural Heritage</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="compare-target">Target Column <small>(opsional)</small></label>
+      <input class="form-input" id="compare-target" placeholder="Misal: Disease, Growth_Milestone" />
+    </div>
+    <button class="btn-outline" id="btn-compare" onclick="compareModels()" style="margin-top:8px;">Bandingkan Semua Model</button>
+  </div>
+  <div class="result-box" id="compare-result-box">
+    <span class="result-chip">Comparison</span>
+    <h3 class="result-title" id="compare-title">Hasil Perbandingan</h3>
+    <div id="compare-table-wrap"></div>
+  </div>
+</div>
+
+<script>
+// ── DATASET CONFIGS (per-model) ──────────────────────────────
+// AIS               → interval _L / _M / _H  (3 bins via pd.cut)
+// Apriori           → interval _HIGH / _LOW   (median split, tag "Col_HIGH")
+// AprioriTid        → interval _H / _L        (median split biner, BERBEDA dari Apriori)
+//                     Prediksi: TID co-occurrence scoring (bukan confidence rules)
+// SetOrientedMining → interval _HIGH / _LOW   (sama dengan Apriori)
+
+const DS_CONFIG_AIS = {
+  Dataset1: {
+    label: 'Rice Leaf Disease', target: 'Disease',
+    hint: 'Fitur warna daun padi. Interval AIS: _L (Low), _M (Medium), _H (High).',
+    predHint: 'Contoh: G_mean=G_mean_L + R_std=R_std_H → Bacterial leaf blight',
+    groups: [
+      { label: 'R_mean', tags: ['R_mean=R_mean_L','R_mean=R_mean_M','R_mean=R_mean_H'] },
+      { label: 'G_mean', tags: ['G_mean=G_mean_L','G_mean=G_mean_M','G_mean=G_mean_H'] },
+      { label: 'B_mean', tags: ['B_mean=B_mean_L','B_mean=B_mean_M','B_mean=B_mean_H'] },
+      { label: 'R_std',  tags: ['R_std=R_std_L','R_std=R_std_M','R_std=R_std_H'] },
+      { label: 'G_std',  tags: ['G_std=G_std_L','G_std=G_std_M','G_std=G_std_H'] },
+      { label: 'B_std',  tags: ['B_std=B_std_L','B_std=B_std_M','B_std=B_std_H'] },
+    ],
+    examples: [
+      { label: '→ Bacterial leaf blight', conds: ['G_mean=G_mean_L','R_std=R_std_H'] },
+      { label: '→ Brown spot',            conds: ['G_mean=G_mean_M','B_mean=B_mean_M'] },
+      { label: '→ Leaf smut',             conds: ['R_mean=R_mean_H','G_std=G_std_L'] },
+    ]
+  },
+  Dataset2: {
+    label: 'Plant Growth', target: 'Growth_Milestone',
+    hint: 'Kondisi lingkungan tumbuh. Interval AIS: _L / _M / _H.',
+    predHint: 'Contoh: Humidity=Humidity_H + Temperature=Temperature_M → Vegetative Stage',
+    groups: [
+      { label: 'Sunlight_Hours',  tags: ['Sunlight_Hours=Sunlight_Hours_L','Sunlight_Hours=Sunlight_Hours_M','Sunlight_Hours=Sunlight_Hours_H'] },
+      { label: 'Water_Frequency', tags: ['Water_Frequency=Water_Frequency_L','Water_Frequency=Water_Frequency_M','Water_Frequency=Water_Frequency_H'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_L','Temperature=Temperature_M','Temperature=Temperature_H'] },
+      { label: 'Humidity',        tags: ['Humidity=Humidity_L','Humidity=Humidity_M','Humidity=Humidity_H'] },
+    ],
+    examples: [
+      { label: '→ Vegetative Stage', conds: ['Sunlight_Hours=Sunlight_Hours_M','Humidity=Humidity_H','Temperature=Temperature_M'] },
+      { label: '→ Germination',      conds: ['Sunlight_Hours=Sunlight_Hours_L','Water_Frequency=Water_Frequency_H'] },
+      { label: '→ Flowering',        conds: ['Temperature=Temperature_H','Humidity=Humidity_M'] },
+    ]
+  },
+  Dataset3: {
+    label: 'Agriculture & Farming', target: 'Crop_Yield',
+    hint: 'Data performa panen. Interval AIS: _L / _M / _H.',
+    predHint: 'Contoh: Fertilizer_Used=..._H + Crop_Yield=..._H → multi-cropping',
+    groups: [
+      { label: 'Crop_Yield',      tags: ['Crop_Yield=Crop_Yield_L','Crop_Yield=Crop_Yield_M','Crop_Yield=Crop_Yield_H'] },
+      { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_L','Fertilizer_Used=Fertilizer_Used_M','Fertilizer_Used=Fertilizer_Used_H'] },
+      { label: 'Rainfall',        tags: ['Rainfall=Rainfall_L','Rainfall=Rainfall_M','Rainfall=Rainfall_H'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_L','Temperature=Temperature_M','Temperature=Temperature_H'] },
+      { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_L','Pesticide_Use=Pesticide_Use_M','Pesticide_Use=Pesticide_Use_H'] },
+    ],
+    examples: [
+      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_H','Fertilizer_Used=Fertilizer_Used_H'] },
+      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_L','Fertilizer_Used=Fertilizer_Used_L'] },
+      { label: '→ Medium Yield',                conds: ['Rainfall=Rainfall_M','Temperature=Temperature_M'] },
+    ]
+  },
+  Dataset4: {
+    label: 'Agricultural Heritage', target: 'Value From',
+    hint: 'Data historis pertanian Seshat. Interval AIS: _L / _M / _H.',
+    predHint: 'Contoh: Variable=Variable_H + NGA=NGA_M → Value To tinggi',
+    groups: [
+      { label: 'Variable', tags: ['Variable=Variable_L','Variable=Variable_M','Variable=Variable_H'] },
+      { label: 'NGA',      tags: ['NGA=NGA_L','NGA=NGA_M','NGA=NGA_H'] },
+      { label: 'Unit',     tags: ['Unit=Unit_L','Unit=Unit_M','Unit=Unit_H'] },
+    ],
+    examples: [
+      { label: '→ High Heritage Value', conds: ['Variable=Variable_H','NGA=NGA_M'] },
+      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_L','Unit=Unit_L'] },
+    ]
+  }
+};
+
+// Apriori / AprioriTid / SetOrientedMining — diskritisasi median → _HIGH / _LOW
+const DS_CONFIG_APRIORI = {
+  Dataset1: {
+    label: 'Rice Leaf Disease', target: 'Disease',
+    hint: 'Fitur warna daun padi. Interval Apriori (median split): _HIGH (≥ median), _LOW (< median).',
+    predHint: 'Contoh: G_mean=G_mean_LOW + R_std=R_std_HIGH → Bacterial leaf blight',
+    groups: [
+      { label: 'R_mean', tags: ['R_mean=R_mean_HIGH','R_mean=R_mean_LOW'] },
+      { label: 'G_mean', tags: ['G_mean=G_mean_HIGH','G_mean=G_mean_LOW'] },
+      { label: 'B_mean', tags: ['B_mean=B_mean_HIGH','B_mean=B_mean_LOW'] },
+      { label: 'R_std',  tags: ['R_std=R_std_HIGH','R_std=R_std_LOW'] },
+      { label: 'G_std',  tags: ['G_std=G_std_HIGH','G_std=G_std_LOW'] },
+      { label: 'B_std',  tags: ['B_std=B_std_HIGH','B_std=B_std_LOW'] },
+    ],
+    examples: [
+      { label: '→ Bacterial leaf blight', conds: ['G_mean=G_mean_LOW','R_std=R_std_HIGH'] },
+      { label: '→ Brown spot',            conds: ['G_mean=G_mean_HIGH','B_mean=B_mean_LOW'] },
+      { label: '→ Leaf smut',             conds: ['R_mean=R_mean_HIGH','G_std=G_std_LOW'] },
+    ]
+  },
+  Dataset2: {
+    label: 'Plant Growth', target: 'Growth_Milestone',
+    hint: 'Kondisi lingkungan tumbuh. Interval Apriori (median split): _HIGH / _LOW.',
+    predHint: 'Contoh: Humidity=Humidity_HIGH + Sunlight_Hours=Sunlight_Hours_HIGH → Vegetative Stage',
+    groups: [
+      { label: 'Sunlight_Hours',  tags: ['Sunlight_Hours=Sunlight_Hours_HIGH','Sunlight_Hours=Sunlight_Hours_LOW'] },
+      { label: 'Water_Frequency', tags: ['Water_Frequency=Water_Frequency_HIGH','Water_Frequency=Water_Frequency_LOW'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_HIGH','Temperature=Temperature_LOW'] },
+      { label: 'Humidity',        tags: ['Humidity=Humidity_HIGH','Humidity=Humidity_LOW'] },
+    ],
+    examples: [
+      { label: '→ Vegetative Stage', conds: ['Humidity=Humidity_HIGH','Sunlight_Hours=Sunlight_Hours_HIGH'] },
+      { label: '→ Germination',      conds: ['Sunlight_Hours=Sunlight_Hours_LOW','Water_Frequency=Water_Frequency_HIGH'] },
+      { label: '→ Flowering',        conds: ['Temperature=Temperature_HIGH','Humidity=Humidity_LOW'] },
+    ]
+  },
+  Dataset3: {
+    label: 'Agriculture & Farming', target: 'Crop_Yield',
+    hint: 'Data performa panen. Interval Apriori (median split): _HIGH / _LOW.',
+    predHint: 'Contoh: Fertilizer_Used=..._HIGH + Crop_Yield=..._HIGH → multi-cropping',
+    groups: [
+      { label: 'Crop_Yield',      tags: ['Crop_Yield=Crop_Yield_HIGH','Crop_Yield=Crop_Yield_LOW'] },
+      { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_HIGH','Fertilizer_Used=Fertilizer_Used_LOW'] },
+      { label: 'Rainfall',        tags: ['Rainfall=Rainfall_HIGH','Rainfall=Rainfall_LOW'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_HIGH','Temperature=Temperature_LOW'] },
+      { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_HIGH','Pesticide_Use=Pesticide_Use_LOW'] },
+    ],
+    examples: [
+      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_HIGH','Fertilizer_Used=Fertilizer_Used_HIGH'] },
+      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_LOW','Fertilizer_Used=Fertilizer_Used_LOW'] },
+      { label: '→ High Rainfall + Yield',       conds: ['Rainfall=Rainfall_HIGH','Crop_Yield=Crop_Yield_HIGH'] },
+    ]
+  },
+  Dataset4: {
+    label: 'Agricultural Heritage', target: 'Value From',
+    hint: 'Data historis pertanian Seshat. Interval Apriori (median split): _HIGH / _LOW.',
+    predHint: 'Contoh: Variable=Variable_HIGH + NGA=NGA_LOW → Value To tinggi',
+    groups: [
+      { label: 'Variable',   tags: ['Variable=Variable_HIGH','Variable=Variable_LOW'] },
+      { label: 'NGA',        tags: ['NGA=NGA_HIGH','NGA=NGA_LOW'] },
+      { label: 'Unit',       tags: ['Unit=Unit_HIGH','Unit=Unit_LOW'] },
+      { label: 'Value From', tags: ['Value From=Value From_HIGH','Value From=Value From_LOW'] },
+    ],
+    examples: [
+      { label: '→ High Heritage Value', conds: ['Variable=Variable_HIGH','NGA=NGA_LOW'] },
+      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_LOW','Unit=Unit_LOW'] },
+    ]
+  }
+};
+
+// AprioriTid — diskritisasi median biner → _H (≥ median) / _L (< median)
+// ⚠️  BERBEDA dengan Apriori yang pakai _HIGH/_LOW
+// Prediksi menggunakan TID co-occurrence scoring
+const DS_CONFIG_APRIORITID = {
+  Dataset1: {
+    label: 'Rice Leaf Disease', target: 'Disease',
+    hint: 'Fitur warna daun padi. AprioriTid diskritisasi: _H (≥ median), _L (< median).',
+    predHint: 'Contoh: G_mean_L + R_std_H → Disease_L (cenderung Bacterial leaf blight)',
+    badge: '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>',
+    groups: [
+      { label: 'R_mean', tags: ['R_mean=R_mean_H','R_mean=R_mean_L'] },
+      { label: 'G_mean', tags: ['G_mean=G_mean_H','G_mean=G_mean_L'] },
+      { label: 'B_mean', tags: ['B_mean=B_mean_H','B_mean=B_mean_L'] },
+      { label: 'R_std',  tags: ['R_std=R_std_H','R_std=R_std_L'] },
+      { label: 'G_std',  tags: ['G_std=G_std_H','G_std=G_std_L'] },
+      { label: 'B_std',  tags: ['B_std=B_std_H','B_std=B_std_L'] },
+    ],
+    examples: [
+      { label: '→ Bacterial leaf blight', conds: ['G_mean=G_mean_L','R_std=R_std_H'] },
+      { label: '→ Brown spot',            conds: ['G_mean=G_mean_H','B_mean=B_mean_L'] },
+      { label: '→ Leaf smut',             conds: ['R_mean=R_mean_H','G_std=G_std_L'] },
+    ]
+  },
+  Dataset2: {
+    label: 'Plant Growth', target: 'Growth_Milestone',
+    hint: 'Kondisi lingkungan tumbuh. AprioriTid diskritisasi: _H (≥ median), _L (< median).',
+    predHint: 'Contoh: Humidity_H + Sunlight_Hours_H → Growth_Milestone_H (Vegetative Stage)',
+    badge: '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>',
+    groups: [
+      { label: 'Sunlight_Hours',  tags: ['Sunlight_Hours=Sunlight_Hours_H','Sunlight_Hours=Sunlight_Hours_L'] },
+      { label: 'Water_Frequency', tags: ['Water_Frequency=Water_Frequency_H','Water_Frequency=Water_Frequency_L'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_H','Temperature=Temperature_L'] },
+      { label: 'Humidity',        tags: ['Humidity=Humidity_H','Humidity=Humidity_L'] },
+    ],
+    examples: [
+      { label: '→ Vegetative Stage', conds: ['Humidity=Humidity_H','Sunlight_Hours=Sunlight_Hours_H'] },
+      { label: '→ Germination',      conds: ['Sunlight_Hours=Sunlight_Hours_L','Water_Frequency=Water_Frequency_H'] },
+      { label: '→ Flowering',        conds: ['Temperature=Temperature_H','Humidity=Humidity_L'] },
+    ]
+  },
+  Dataset3: {
+    label: 'Agriculture & Farming', target: 'Crop_Yield',
+    hint: 'Data performa panen. AprioriTid diskritisasi: _H (≥ median), _L (< median).',
+    predHint: 'Contoh: Fertilizer_Used_H + Rainfall_H → Crop_Yield_H (multi-cropping)',
+    badge: '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>',
+    groups: [
+      { label: 'Crop_Yield',       tags: ['Crop_Yield=Crop_Yield_H','Crop_Yield=Crop_Yield_L'] },
+      { label: 'Fertilizer_Used',  tags: ['Fertilizer_Used=Fertilizer_Used_H','Fertilizer_Used=Fertilizer_Used_L'] },
+      { label: 'Rainfall',         tags: ['Rainfall=Rainfall_H','Rainfall=Rainfall_L'] },
+      { label: 'Temperature',      tags: ['Temperature=Temperature_H','Temperature=Temperature_L'] },
+      { label: 'Pesticide_Use',    tags: ['Pesticide_Use=Pesticide_Use_H','Pesticide_Use=Pesticide_Use_L'] },
+    ],
+    examples: [
+      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_H','Fertilizer_Used=Fertilizer_Used_H'] },
+      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_L','Fertilizer_Used=Fertilizer_Used_L'] },
+      { label: '→ High Rainfall + Yield',       conds: ['Rainfall=Rainfall_H','Crop_Yield=Crop_Yield_H'] },
+    ]
+  },
+  Dataset4: {
+    label: 'Agricultural Heritage', target: 'Value From',
+    hint: 'Data historis pertanian Seshat. AprioriTid diskritisasi: _H (≥ median), _L (< median).',
+    predHint: 'Contoh: Variable_H + NGA_L → Value_To_H (produktivitas historis tinggi)',
+    badge: '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>',
+    groups: [
+      { label: 'Variable',    tags: ['Variable=Variable_H','Variable=Variable_L'] },
+      { label: 'NGA',         tags: ['NGA=NGA_H','NGA=NGA_L'] },
+      { label: 'Unit',        tags: ['Unit=Unit_H','Unit=Unit_L'] },
+      { label: 'Value From',  tags: ['Value From=Value From_H','Value From=Value From_L'] },
+    ],
+    examples: [
+      { label: '→ High Heritage Value', conds: ['Variable=Variable_H','NGA=NGA_L'] },
+      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_L','Unit=Unit_L'] },
+    ]
+  }
+};
+
+// SetOrientedMining — diskritisasi median → _HIGH / _LOW (sama dengan Apriori)
+// Mekanisme: SQLite in-memory, antecedent tunggal, confidence-based matching
+const DS_CONFIG_SETORIENTED = {
+  Dataset1: {
+    label: 'Rice Leaf Disease', target: 'Disease',
+    hint: 'Fitur warna daun padi. SetOrientedMining (median split): _HIGH (≥ median), _LOW (< median).',
+    predHint: 'Contoh: G_mean=G_mean_LOW + R_std=R_std_HIGH → Bacterial leaf blight',
+    groups: [
+      { label: 'R_mean', tags: ['R_mean=R_mean_HIGH','R_mean=R_mean_LOW'] },
+      { label: 'G_mean', tags: ['G_mean=G_mean_HIGH','G_mean=G_mean_LOW'] },
+      { label: 'B_mean', tags: ['B_mean=B_mean_HIGH','B_mean=B_mean_LOW'] },
+      { label: 'R_std',  tags: ['R_std=R_std_HIGH','R_std=R_std_LOW'] },
+      { label: 'G_std',  tags: ['G_std=G_std_HIGH','G_std=G_std_LOW'] },
+      { label: 'B_std',  tags: ['B_std=B_std_HIGH','B_std=B_std_LOW'] },
+    ],
+    examples: [
+      { label: '→ Bacterial leaf blight', conds: ['G_mean=G_mean_LOW','R_std=R_std_HIGH'] },
+      { label: '→ Brown spot',            conds: ['G_mean=G_mean_HIGH','B_mean=B_mean_LOW'] },
+      { label: '→ Leaf smut',             conds: ['R_mean=R_mean_HIGH','G_std=G_std_LOW'] },
+    ]
+  },
+  Dataset2: {
+    label: 'Plant Growth', target: 'Growth_Milestone',
+    hint: 'Kondisi lingkungan tumbuh. SetOrientedMining (median split): _HIGH / _LOW.',
+    predHint: 'Contoh: Humidity=Humidity_HIGH + Sunlight_Hours=Sunlight_Hours_HIGH → Vegetative Stage',
+    groups: [
+      { label: 'Sunlight_Hours',  tags: ['Sunlight_Hours=Sunlight_Hours_HIGH','Sunlight_Hours=Sunlight_Hours_LOW'] },
+      { label: 'Water_Frequency', tags: ['Water_Frequency=Water_Frequency_HIGH','Water_Frequency=Water_Frequency_LOW'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_HIGH','Temperature=Temperature_LOW'] },
+      { label: 'Humidity',        tags: ['Humidity=Humidity_HIGH','Humidity=Humidity_LOW'] },
+    ],
+    examples: [
+      { label: '→ Vegetative Stage', conds: ['Humidity=Humidity_HIGH','Sunlight_Hours=Sunlight_Hours_HIGH'] },
+      { label: '→ Germination',      conds: ['Sunlight_Hours=Sunlight_Hours_LOW','Water_Frequency=Water_Frequency_HIGH'] },
+      { label: '→ Flowering',        conds: ['Temperature=Temperature_HIGH','Humidity=Humidity_LOW'] },
+    ]
+  },
+  Dataset3: {
+    label: 'Agriculture & Farming', target: 'Crop_Yield',
+    hint: 'Data performa panen. SetOrientedMining (median split): _HIGH / _LOW.',
+    predHint: 'Contoh: Fertilizer_Used=..._HIGH + Rainfall=..._HIGH → Crop_Yield_HIGH (multi-cropping)',
+    groups: [
+      { label: 'Crop_Yield',      tags: ['Crop_Yield=Crop_Yield_HIGH','Crop_Yield=Crop_Yield_LOW'] },
+      { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_HIGH','Fertilizer_Used=Fertilizer_Used_LOW'] },
+      { label: 'Rainfall',        tags: ['Rainfall=Rainfall_HIGH','Rainfall=Rainfall_LOW'] },
+      { label: 'Temperature',     tags: ['Temperature=Temperature_HIGH','Temperature=Temperature_LOW'] },
+      { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_HIGH','Pesticide_Use=Pesticide_Use_LOW'] },
+    ],
+    examples: [
+      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_HIGH','Fertilizer_Used=Fertilizer_Used_HIGH'] },
+      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_LOW','Fertilizer_Used=Fertilizer_Used_LOW'] },
+      { label: '→ High Rainfall + Yield',       conds: ['Rainfall=Rainfall_HIGH','Crop_Yield=Crop_Yield_HIGH'] },
+    ]
+  },
+  Dataset4: {
+    label: 'Agricultural Heritage', target: 'Value From',
+    hint: 'Data historis pertanian Seshat. SetOrientedMining (median split): _HIGH / _LOW.',
+    predHint: 'Contoh: Variable=Variable_HIGH + NGA=NGA_LOW → Value To tinggi',
+    groups: [
+      { label: 'Variable',   tags: ['Variable=Variable_HIGH','Variable=Variable_LOW'] },
+      { label: 'NGA',        tags: ['NGA=NGA_HIGH','NGA=NGA_LOW'] },
+      { label: 'Unit',       tags: ['Unit=Unit_HIGH','Unit=Unit_LOW'] },
+      { label: 'Value From', tags: ['Value From=Value From_HIGH','Value From=Value From_LOW'] },
+    ],
+    examples: [
+      { label: '→ High Heritage Value', conds: ['Variable=Variable_HIGH','NGA=NGA_LOW'] },
+      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_LOW','Unit=Unit_LOW'] },
+    ]
+  }
+};
+
+function getConfig(dataset) {
+  const model = document.getElementById('pred-model').value;
+  if (model === 'AgrawalImielinskiSwami') return DS_CONFIG_AIS[dataset];
+  if (model === 'AprioriTid')            return DS_CONFIG_APRIORITID[dataset];
+  if (model === 'SetOrientedMining')     return DS_CONFIG_SETORIENTED[dataset];
+  return DS_CONFIG_APRIORI[dataset];  // Apriori
+}
+
+// Keep DS_CONFIG as alias for backward compat (analysis page etc.)
+const DS_CONFIG = DS_CONFIG_AIS;
+
+let selectedTags = new Set();
+
+function showPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('visible'));
+  document.querySelectorAll('.nav-links button').forEach(b => b.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('visible');
+  document.getElementById('nav-' + name).classList.add('active');
+}
+
+function goAnalysis(modelVal) {
+  showPage('analysis');
+  document.getElementById('model').value = modelVal;
+}
+
+function setLoading(btnId, loading, label) {
+  const btn = document.getElementById(btnId);
+  btn.disabled = loading;
+  btn.innerHTML = loading ? '<span class="loading-dots">Memproses</span>' : label;
+}
+
+// ── SIMULASI PAGE ────────────────────────────────────────────
+function updatePredictInputs() {
+  const ds  = document.getElementById('pred-dataset').value;
+  const cfg = getConfig(ds);
+  const model = document.getElementById('pred-model').value;
+  selectedTags.clear();
+  renderSelectedTags();
+
+  // Show interval format badge
+  let badge;
+  if (model === 'AgrawalImielinskiSwami') {
+    badge = '<span style="background:rgba(100,160,100,0.12);color:#3a7a3a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _L / _M / _H</span>';
+  } else if (model === 'AprioriTid') {
+    badge = '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>';
+  } else if (model === 'SetOrientedMining') {
+    badge = '<span style="background:rgba(180,100,200,0.12);color:#6a2a8a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _HIGH / _LOW · SQL Set</span>';
+  } else {
+    badge = '<span style="background:rgba(212,175,55,0.12);color:#8a6e1a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _HIGH / _LOW</span>';
+  }
+
+  let html = `<div class="ds-hint">🎯 <strong>Target:</strong> ${cfg.target}${badge}<br><span style="margin-top:4px;display:block;">${cfg.predHint}</span></div>`;
+
+  // Example buttons
+  html += `<div style="margin-bottom:16px;"><span style="font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:#8a7a55;">Contoh Skenario</span><div class="tag-row" style="margin-top:8px;">`;
+  cfg.examples.forEach(ex => {
+    html += `<button class="tag-btn" onclick='loadExample(${JSON.stringify(ex.conds)})'>${ex.label}</button>`;
+  });
+  html += `</div></div>`;
+
+  // Feature groups
+  html += `<div class="ds-inputs-title">Pilih Kondisi Input</div>`;
+  cfg.groups.forEach(g => {
+    html += `<div class="form-group"><label class="form-label">${g.label}</label><div class="tag-row">`;
+    g.tags.forEach(t => {
+      const shortLabel = t.split('=')[1].replace(g.label + '_', '');
+      html += `<button class="tag-btn" id="tag-${CSS.escape(t)}" onclick="toggleTag('${t}', '${g.label}')">${shortLabel}</button>`;
+    });
+    html += `</div></div>`;
+  });
+
+  document.getElementById('pred-dynamic-inputs').innerHTML = html;
+}
+
+function toggleTag(tag, group) {
+  // Only one per group allowed
+  const cfg = getConfig(document.getElementById('pred-dataset').value);
+  const grp = cfg.groups.find(g => g.label === group);
+  if (grp) {
+    grp.tags.forEach(t => {
+      if (selectedTags.has(t) && t !== tag) {
+        selectedTags.delete(t);
+        const el = document.getElementById('tag-' + CSS.escape(t));
+        if (el) el.classList.remove('selected');
+      }
+    });
+  }
+  const el = document.getElementById('tag-' + CSS.escape(tag));
+  if (selectedTags.has(tag)) {
+    selectedTags.delete(tag);
+    if (el) el.classList.remove('selected');
+  } else {
+    selectedTags.add(tag);
+    if (el) el.classList.add('selected');
+  }
+  renderSelectedTags();
+}
+
+function loadExample(conds) {
+  clearTags();
+  conds.forEach(c => {
+    const parts = c.split('=');
+    const group = parts[0];
+    toggleTag(c, group);
+  });
+}
+
+function clearTags() {
+  selectedTags.clear();
+  document.querySelectorAll('.tag-btn').forEach(b => b.classList.remove('selected'));
+  renderSelectedTags();
+  document.getElementById('pred-result-box').classList.remove('visible');
+}
+
+function renderSelectedTags() {
+  const wrap = document.getElementById('selected-tags-display');
+  if (!wrap) return;
+  if (selectedTags.size === 0) {
+    wrap.innerHTML = '<span style="font-size:12px;color:#b0a090;">Belum ada kondisi dipilih</span>';
+    return;
+  }
+  wrap.innerHTML = [...selectedTags].map(t =>
+    `<span class="selected-tag">${t} <button onclick="toggleTag('${t}','${t.split('=')[0]}')">×</button></span>`
+  ).join('');
+}
+
+function runPredict() {
+  if (selectedTags.size === 0) {
+    alert('Pilih minimal 1 kondisi terlebih dahulu.');
+    return;
+  }
+  const dataset = document.getElementById('pred-dataset').value;
+  const model   = document.getElementById('pred-model').value;
+  const cfg     = getConfig(dataset);
+
+  setLoading('btn-predict', true, 'Prediksi');
+
+  fetch('/predict', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset, model, target: cfg.target, conditions: [...selectedTags] })
+  })
+  .then(r => r.json())
+  .then(data => {
+    setLoading('btn-predict', false, 'Prediksi');
+    const box = document.getElementById('pred-result-box');
+    box.classList.add('visible');
+    document.getElementById('pred-result-title').textContent = `${model} — ${cfg.label}`;
+
+    if (data.status === 'success') {
+      document.getElementById('pred-prediction-area').innerHTML =
+        '<div class="prediction-banner">' +
+          '<div class="prediction-arrow">\u2192 Hasil Prediksi</div>' +
+          '<div class="prediction-value">' + data.prediction + '</div>' +
+        '</div>';
+
+      // Metric tiles — AprioriTid tampilkan TID co-occurrence metrics
+      if (model === 'AprioriTid') {
+        document.getElementById('pred-metric-grid').innerHTML =
+          '<div class="metric-tile"><div class="metric-label">TID Score</div><div class="metric-value">' + (data.tid_count != null ? data.tid_count : '—') + '</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Matching TIDs</div><div class="metric-value">' + (data.matching_tids != null ? data.matching_tids : '—') + '</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Rel. Confidence</div><div class="metric-value">' + (data.confidence*100).toFixed(1) + '%</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Lift</div><div class="metric-value">' + data.lift.toFixed(4) + '</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Support</div><div class="metric-value">' + data.support.toFixed(4) + '</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Kandidat</div><div class="metric-value">' + data.top_rules.length + '</div></div>';
+      } else {
+        document.getElementById('pred-metric-grid').innerHTML =
+          '<div class="metric-tile"><div class="metric-label">Confidence</div><div class="metric-value">' + (data.confidence*100).toFixed(1) + '%</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Lift</div><div class="metric-value">' + data.lift.toFixed(4) + '</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Support</div><div class="metric-value">' + data.support.toFixed(4) + '</div></div>' +
+          '<div class="metric-tile"><div class="metric-label">Rules Cocok</div><div class="metric-value">' + data.top_rules.length + '</div></div>';
+      }
+
+      var rules = data.top_rules || [];
+      var rulesLabel = model === 'AprioriTid' ? 'Top Kandidat Konsekuen (TID Co-occurrence)' : 'Top Rules yang Cocok';
+      var rulesHtml = rules.map(function(r) {
+        var meta = model === 'AprioriTid'
+          ? 'tid ' + (r.tid_count != null ? r.tid_count : '?') + '  conf ' + (r.confidence*100).toFixed(1) + '%  lift ' + r.lift.toFixed(3)
+          : 'conf ' + (r.confidence*100).toFixed(1) + '%  lift ' + r.lift.toFixed(3);
+        return '<li>' + r.antecedent + ' \u2192 ' + r.consequent + '<span class="conf">' + meta + '</span></li>';
+      }).join('');
+      document.getElementById('pred-rules-section').innerHTML = rules.length
+        ? '<p style="font-size:12px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#8a7a55;margin:20px 0 10px;">' + rulesLabel + '</p><ul class="rules-list">' + rulesHtml + '</ul>'
+        : '';
+
+    } else if (data.status === 'no_match') {
+      document.getElementById('pred-prediction-area').innerHTML =
+        '<p class="no-match-msg">\u26a0\ufe0f ' + data.message + '</p><p style="font-size:12px;color:#a09070;margin-top:8px;">' + (data.tip || '') + '</p>';
+      document.getElementById('pred-metric-grid').innerHTML = '';
+      document.getElementById('pred-rules-section').innerHTML = '';
+    } else {
+      document.getElementById('pred-prediction-area').innerHTML =
+        '<p class="err-msg">Error: ' + data.message + '</p>';
+      document.getElementById('pred-metric-grid').innerHTML = '';
+      document.getElementById('pred-rules-section').innerHTML = '';
+    }
+  })
+  .catch(() => {
+    setLoading('btn-predict', false, 'Prediksi');
+    document.getElementById('pred-result-box').classList.add('visible');
+    document.getElementById('pred-prediction-area').innerHTML =
+      '<p class="err-msg">Tidak dapat terhubung ke server. Pastikan Web.py sudah berjalan di port 5000.</p>';
+  });
+}
+
+// ── ANALYSIS PAGE ────────────────────────────────────────────
+function analyze() {
+  const dataset = document.getElementById('dataset').value;
+  const model   = document.getElementById('model').value;
+  const target  = document.getElementById('target').value;
+  setLoading('btn-analyze', true, 'Analyze');
+
+  fetch('/analyze', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset, model, target })
+  })
+  .then(r => r.json())
+  .then(data => {
+    setLoading('btn-analyze', false, 'Analyze');
+    const box = document.getElementById('result-box');
+    box.classList.add('visible');
+    const dsLabel = document.getElementById('dataset').selectedOptions[0].text;
+    const mdLabel = document.getElementById('model').selectedOptions[0].text;
+    document.getElementById('result-title').textContent = `${mdLabel} — ${dsLabel}`;
+
+    if (data.status === 'success') {
+      var skip = new Set(['status','top_rules','model','data_shape']);
+      var metrics = Object.entries(data).filter(function(e) { return !skip.has(e[0]); });
+      var metricTiles = metrics.map(function(e) {
+        var k = e[0], v = e[1];
+        var val = (typeof v === 'number') ? (Number.isInteger(v) ? v : v.toFixed(4)) : v;
+        return '<div class="metric-tile"><div class="metric-label">' + k.replace(/_/g,' ') + '</div><div class="metric-value">' + val + '</div></div>';
+      }).join('');
+      document.getElementById('metric-grid').innerHTML =
+        '<div class="metric-tile"><div class="metric-label">Data Shape</div><div class="metric-value" style="font-size:16px;">' + data.data_shape + '</div></div>' +
+        metricTiles;
+
+      var rules = data.top_rules || [];
+      var rulesHtml = rules.map(function(r) {
+        return '<li>' + r.antecedent + ' \u2192 ' + r.consequent + '<span class="conf">conf ' + (r.confidence*100).toFixed(1) + '%</span></li>';
+      }).join('');
+      document.getElementById('rules-section').innerHTML = rules.length
+        ? '<p style="font-size:12px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#8a7a55;margin:20px 0 10px;">Top Rules</p><ul class="rules-list">' + rulesHtml + '</ul>'
+        : '';
+    } else {
+      document.getElementById('metric-grid').innerHTML = '<p class="err-msg">' + (data.message || 'Error tidak diketahui') + '</p>';
+      document.getElementById('rules-section').innerHTML = '';
+    }
+  })
+  .catch(() => {
+    setLoading('btn-analyze', false, 'Analyze');
+    document.getElementById('result-box').classList.add('visible');
+    document.getElementById('metric-grid').innerHTML = '<p class="err-msg">Tidak dapat terhubung ke server backend.</p>';
+  });
+}
+
+// ── COMPARE PAGE ─────────────────────────────────────────────
+function compareModels() {
+  const dataset = document.getElementById('compare-dataset').value;
+  const target  = document.getElementById('compare-target').value;
+  setLoading('btn-compare', true, 'Bandingkan Semua Model');
+
+  fetch('/compare', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataset, target })
+  })
+  .then(r => r.json())
+  .then(data => {
+    setLoading('btn-compare', false, 'Bandingkan Semua Model');
+    const box = document.getElementById('compare-result-box');
+    box.classList.add('visible');
+    const dsLabel = document.getElementById('compare-dataset').selectedOptions[0].text;
+    document.getElementById('compare-title').textContent = 'Perbandingan — ' + dsLabel;
+
+    if (data && !data.error) {
+      const entries = Object.entries(data);
+      const skip = new Set(['status','top_rules','model']);
+      const allKeys = [...new Set(entries.flatMap(([,m]) => Object.keys(m).filter(k => !skip.has(k))))];
+
+      let best = { val: -1, model: '' };
+      entries.forEach(([model, m]) => {
+        const conf = parseFloat(m.avg_confidence || 0);
+        if (conf > best.val) { best = { val: conf, model }; }
+      });
+
+      let html = '<div style="overflow-x:auto;"><table class="compare-table"><thead><tr><th>Model</th>';
+      allKeys.forEach(k => html += `<th>${k.replace(/_/g,' ')}</th>`);
+      html += '</tr></thead><tbody>';
+      entries.forEach(([model, m]) => {
+        const isBest = model === best.model;
+        html += `<tr><td><strong>${model}</strong>${isBest ? '<span class="best-badge">Top</span>' : ''}</td>`;
+        allKeys.forEach(k => {
+          const v = m[k];
+          const d = v === undefined ? '—' : (typeof v==='number' ? (Number.isInteger(v)?v:v.toFixed(4)) : v);
+          html += `<td>${d}</td>`;
+        });
+        html += '</tr>';
+      });
+      html += '</tbody></table></div>';
+      document.getElementById('compare-table-wrap').innerHTML = html;
+    } else {
+      document.getElementById('compare-table-wrap').innerHTML =
+        `<p class="err-msg">${(data&&data.error)||'Gagal memuat hasil perbandingan.'}</p>`;
+    }
+  })
+  .catch(() => {
+    setLoading('btn-compare', false, 'Bandingkan Semua Model');
+    document.getElementById('compare-result-box').classList.add('visible');
+    document.getElementById('compare-table-wrap').innerHTML = '<p class="err-msg">Tidak dapat terhubung ke server backend.</p>';
+  });
+}
+
+// Init
+updatePredictInputs();
+
+// ── IMAGE INPUT (Dataset 1) ───────────────────────────────────
+let imageDataUrl = null;
+let cameraStream = null;
+
+// Tampilkan/sembunyikan section gambar berdasarkan dataset
+const origUpdatePredictInputs = updatePredictInputs;
+updatePredictInputs = function() {
+  origUpdatePredictInputs();
+  const ds = document.getElementById('pred-dataset').value;
+  const sec = document.getElementById('image-input-section');
+  if (sec) sec.style.display = (ds === 'Dataset1') ? 'block' : 'none';
+};
+// Re-run after override
+updatePredictInputs();
+
+function switchImageTab(tab) {
+  document.getElementById('img-tab-file').style.display = (tab === 'file') ? 'block' : 'none';
+  document.getElementById('img-tab-camera').style.display = (tab === 'camera') ? 'block' : 'none';
+  document.getElementById('tab-file').classList.toggle('selected', tab === 'file');
+  document.getElementById('tab-camera').classList.toggle('selected', tab === 'camera');
+  if (tab !== 'camera') stopCamera();
+}
+
+function handleFileSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => setImagePreview(ev.target.result, file.name);
+  reader.readAsDataURL(file);
+}
+
+function setImagePreview(dataUrl, name) {
+  imageDataUrl = dataUrl;
+  const wrap = document.getElementById('img-preview-wrap');
+  wrap.style.display = 'flex';
+  document.getElementById('img-preview').src = dataUrl;
+  document.getElementById('img-preview-name').textContent = name || 'Foto kamera';
+  document.getElementById('img-feat-display').textContent = 'Siap untuk diprediksi ✓';
+  document.getElementById('btn-predict-img').disabled = false;
+
+  // Drop zone visual
+  const dz = document.getElementById('img-drop-zone');
+  if (dz) dz.style.borderColor = '#d4af37';
+}
+
+function clearImage() {
+  imageDataUrl = null;
+  document.getElementById('img-preview-wrap').style.display = 'none';
+  document.getElementById('img-feat-display').textContent = '';
+  document.getElementById('btn-predict-img').disabled = true;
+  document.getElementById('img-file-input').value = '';
+  const dz = document.getElementById('img-drop-zone');
+  if (dz) dz.style.borderColor = 'rgba(197,160,89,0.4)';
+  document.getElementById('pred-result-box').classList.remove('visible');
+}
+
+// Drag & drop
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('img-drop-zone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.style.borderColor = '#d4af37'; });
+  dz.addEventListener('dragleave', () => dz.style.borderColor = 'rgba(197,160,89,0.4)');
+  dz.addEventListener('drop', e => {
+    e.preventDefault();
+    const file = e.dataTransfer.files[0];
+    if (file && file.type.startsWith('image/')) {
+      const reader = new FileReader();
+      reader.onload = ev => setImagePreview(ev.target.result, file.name);
+      reader.readAsDataURL(file);
+    }
+  });
+});
+
+// Kamera
+async function startCamera() {
+  try {
+    cameraStream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+    document.getElementById('camera-video').srcObject = cameraStream;
+    document.getElementById('btn-start-cam').style.display = 'none';
+    document.getElementById('btn-capture').style.display = 'inline-block';
+    document.getElementById('btn-stop-cam').style.display = 'inline-block';
+  } catch(err) {
+    alert('Tidak bisa mengakses kamera: ' + err.message);
+  }
+}
+
+function stopCamera() {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(t => t.stop());
+    cameraStream = null;
+  }
+  const vid = document.getElementById('camera-video');
+  if (vid) vid.srcObject = null;
+  document.getElementById('btn-start-cam').style.display = 'inline-block';
+  document.getElementById('btn-capture').style.display = 'none';
+  document.getElementById('btn-stop-cam').style.display = 'none';
+}
+
+function capturePhoto() {
+  const video = document.getElementById('camera-video');
+  const canvas = document.getElementById('camera-canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.85);
+  setImagePreview(dataUrl, 'Foto kamera');
+  stopCamera();
+}
+
+// Prediksi dari gambar
+function runImagePredict() {
+  if (!imageDataUrl) return;
+  const model = document.getElementById('pred-model').value;
+  setLoading('btn-predict-img', true, '🔍 Prediksi dari Gambar');
+
+  fetch('/predict_image', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ image_b64: imageDataUrl, model })
+  })
+  .then(r => r.json())
+  .then(data => {
+    setLoading('btn-predict-img', false, '🔍 Prediksi dari Gambar');
+    const box = document.getElementById('pred-result-box');
+    box.classList.add('visible');
+    document.getElementById('pred-result-title').textContent = 'Prediksi via Gambar — Dataset 1 Rice Leaf Disease';
+
+    if (data.status === 'success') {
+      // Tampilkan fitur yang diekstrak
+      const feats = data.features || {};
+      const featStr = Object.entries(feats).map(([k,v]) => `${k}: ${v.toFixed(2)}`).join(' &nbsp;|&nbsp; ');
+      document.getElementById('img-feat-display').innerHTML = '<span style="color:#8a7a55;font-weight:600;">Fitur: </span>' + featStr;
+
+      document.getElementById('pred-prediction-area').innerHTML =
+        '<div class="prediction-banner"><div class="prediction-arrow">Prediksi Penyakit</div>' +
+        '<div class="prediction-value">' + data.prediction + '</div></div>';
+
+      const metricTiles = [
+        { label: 'Confidence', val: (data.confidence * 100).toFixed(1) + '%' },
+        { label: 'Lift',       val: data.lift },
+        { label: 'Support',    val: data.support },
+      ].map(m => `<div class="metric-tile"><div class="metric-label">${m.label}</div><div class="metric-value">${m.val}</div></div>`).join('');
+      document.getElementById('pred-metric-grid').innerHTML = metricTiles;
+
+      const rules = data.top_rules || [];
+      const rulesHtml = rules.map(r =>
+        `<li>${r.antecedent} → ${r.consequent}<span class="conf">conf ${(r.confidence*100).toFixed(1)}%</span></li>`
+      ).join('');
+      document.getElementById('pred-rules-section').innerHTML = rules.length
+        ? '<p style="font-size:12px;font-weight:600;letter-spacing:0.07em;text-transform:uppercase;color:#8a7a55;margin:16px 0 10px;">Top Rules</p><ul class="rules-list">' + rulesHtml + '</ul>'
+        : '';
+
+    } else if (data.status === 'no_match') {
+      document.getElementById('pred-prediction-area').innerHTML =
+        '<p class="no-match-msg">⚠️ ' + data.message + '</p>';
+      document.getElementById('pred-metric-grid').innerHTML = '';
+      document.getElementById('pred-rules-section').innerHTML = '';
+    } else {
+      document.getElementById('pred-prediction-area').innerHTML =
+        '<p class="err-msg">❌ ' + (data.message || 'Error tidak diketahui') + '</p>';
+    }
+  })
+  .catch(() => {
+    setLoading('btn-predict-img', false, '🔍 Prediksi dari Gambar');
+    document.getElementById('pred-result-box').classList.add('visible');
+    document.getElementById('pred-prediction-area').innerHTML =
+      '<p class="err-msg">Tidak dapat terhubung ke server. Pastikan Web.py sudah berjalan.</p>';
+  });
+}
+</script>
+</body>
+</html>
