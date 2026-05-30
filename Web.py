@@ -120,8 +120,8 @@ class AprioriModel:
                 if pd.isna(val):
                     continue
                 if col == target_col:
-                    # Simpan label asli, format "Disease=<label>"
-                    t.append(f"Disease={val}")
+                    # Simpan label asli, format "Target=<label>"
+                    t.append(f"Target={val}")
                 elif col in medians:
                     tag = f"{col}_HIGH" if val >= medians[col] else f"{col}_LOW"
                     t.append(tag)
@@ -158,13 +158,19 @@ class AprioriModel:
         freq_items = {frozenset([k]): v for k, v in item_count.items() if v >= min_count}
 
         # Count 2-itemsets
+        # Untuk pasangan yang melibatkan Target, gunakan threshold lebih rendah
+        # agar dataset 2-bin fitur × 3-label target (max support ~1/6) dan
+        # dataset 3-bin fitur × 3-label target (max support ~1/9) tetap bisa membentuk rules
+        target_min_count = max(2, int(np.ceil(self.min_support * 0.5 * n)))
         freq_items_2 = {}
         item_list = [list(k)[0] for k in freq_items]
         for i in range(len(item_list)):
             for j in range(i+1, len(item_list)):
                 pair = frozenset([item_list[i], item_list[j]])
                 count = sum(1 for t in transactions if item_list[i] in t and item_list[j] in t)
-                if count >= min_count:
+                has_target = any(x.startswith('Target=') for x in pair)
+                threshold = target_min_count if has_target else min_count
+                if count >= threshold:
                     freq_items_2[pair] = count
 
         self.itemsets = list(freq_items.keys()) + list(freq_items_2.keys())
@@ -177,19 +183,19 @@ class AprioriModel:
         for itemset, count in freq_items_2.items():
             items = list(itemset)
             support = count / n
-            has_disease = any(x.startswith('Disease=') for x in items)
+            has_disease = any(x.startswith('Target=') for x in items)
             for i in range(len(items)):
                 ant  = items[i]
                 cons = items[1-i]
-                # Skip rule "Disease → fitur" (direction terbalik, tidak berguna untuk prediksi)
-                if ant.startswith('Disease='):
+                # Skip rule "Target → fitur" (direction terbalik, tidak berguna untuk prediksi)
+                if ant.startswith('Target='):
                     continue
                 ant_sup = item_count.get(ant, 0) / n
                 conf    = support / ant_sup if ant_sup > 0 else 0
                 # Untuk disease rules, turunkan threshold sedikit agar lebih banyak match
                 threshold = self.min_confidence * 0.5 if has_disease else self.min_confidence
                 if conf >= threshold:
-                    display_cons = cons.replace('Disease=', '') if cons.startswith('Disease=') else cons
+                    display_cons = cons.replace('Target=', '') if cons.startswith('Target=') else cons
                     rule = {
                         'antecedent': ant,
                         'consequent': display_cons,
@@ -268,7 +274,7 @@ class AprioriTidModel:
                 if pd.isna(val):
                     continue
                 if col == target_col:
-                    tag = f"Disease={val}"   # label asli, bukan di-discretize
+                    tag = f"Target={val}"   # label asli, bukan di-discretize
                 elif col in medians:
                     tag = self._tag(col, val, medians[col])
                 else:
@@ -286,24 +292,28 @@ class AprioriTidModel:
         self.rules       = []
         self.disease_rules = []
         freq_keys = list(freq1.keys())
+        # Threshold lebih rendah untuk pasangan fitur↔Target agar dataset
+        # 3-bin × 3-label (max support ~1/9) tetap bisa membentuk rules
+        target_min_count = max(2, int(np.ceil(self.min_support * 0.5 * n)))
 
         for i in range(len(freq_keys)):
             for j in range(i + 1, len(freq_keys)):
                 a, b = freq_keys[i], freq_keys[j]
                 inter = freq1[a] & freq1[b]
-                if len(inter) < min_count:
+                has_target_pair = a.startswith('Target=') or b.startswith('Target=')
+                if len(inter) < (target_min_count if has_target_pair else min_count):
                     continue
                 pair = frozenset([a, b])
                 self.pair_tids[pair] = inter
-                has_disease = a.startswith('Disease=') or b.startswith('Disease=')
-                # Turunkan threshold untuk pasangan yang melibatkan Disease
+                has_disease = a.startswith('Target=') or b.startswith('Target=')
+                # Turunkan threshold untuk pasangan yang melibatkan Target
                 threshold = self.min_confidence * 0.5 if has_disease else self.min_confidence
 
-                # a → b  (skip jika a adalah Disease tag)
-                if not a.startswith('Disease='):
+                # a → b  (skip jika a adalah Target tag)
+                if not a.startswith('Target='):
                     conf_ab = len(inter) / len(freq1[a])
                     if conf_ab >= threshold:
-                        display_b = b.replace('Disease=', '') if b.startswith('Disease=') else b
+                        display_b = b.replace('Target=', '') if b.startswith('Target=') else b
                         rule = {
                             'antecedent': a,
                             'consequent': display_b,
@@ -316,11 +326,11 @@ class AprioriTidModel:
                         if has_disease:
                             self.disease_rules.append(rule)
 
-                # b → a  (skip jika b adalah Disease tag)
-                if not b.startswith('Disease='):
+                # b → a  (skip jika b adalah Target tag)
+                if not b.startswith('Target='):
                     conf_ba = len(inter) / len(freq1[b])
                     if conf_ba >= threshold:
-                        display_a = a.replace('Disease=', '') if a.startswith('Disease=') else a
+                        display_a = a.replace('Target=', '') if a.startswith('Target=') else a
                         rule = {
                             'antecedent': b,
                             'consequent': display_a,
@@ -339,7 +349,7 @@ class AprioriTidModel:
         input_tags : list/set of str, format "ColName_H" atau "ColName_L"
                      (sudah di-strip dari prefix "ColName=" oleh caller)
         Returns    : list of dict diurut confidence desc, hanya consequent
-                     berupa label penyakit (Disease=...) jika tersedia.
+                     berupa label target (Target=...) jika tersedia.
         """
         input_set = set(input_tags)
 
@@ -366,9 +376,9 @@ class AprioriTidModel:
         if not cooc:
             return []
 
-        # Prioritaskan consequent berupa label penyakit (Disease=...)
-        disease_cooc = {k: v for k, v in cooc.items() if k.startswith('Disease=')}
-        candidate_cooc = disease_cooc if disease_cooc else cooc
+        # Prioritaskan consequent berupa label target (Target=...)
+        target_cooc = {k: v for k, v in cooc.items() if k.startswith('Target=')}
+        candidate_cooc = target_cooc if target_cooc else cooc
 
         # Buat pseudo-rules dari co-occurrence
         results = []
@@ -377,8 +387,8 @@ class AprioriTidModel:
             rel_conf = cnt / len(matching_tids)
             cons_sup = len(self.tid_lists.get(cons, set())) / n
             lift     = rel_conf / cons_sup if cons_sup > 0 else 1.0
-            # Strip "Disease=" prefix untuk tampilan
-            display_cons = cons.replace('Disease=', '') if cons.startswith('Disease=') else cons
+            # Strip "Target=" prefix untuk tampilan
+            display_cons = cons.replace('Target=', '') if cons.startswith('Target=') else cons
             results.append({
                 'antecedent':    ' + '.join(sorted(input_set)),
                 'consequent':    display_cons,
@@ -414,20 +424,31 @@ class AISAlgorithm:
         self.rules = []
         self.intervals = {}
 
-    def discretize_continuous(self, df):
+    def discretize_continuous(self, df, use_qcut=False):
+        """
+        Diskretisasi kolom numerik menjadi _L / _M / _H.
+        use_qcut=True : pakai pd.qcut (quantile-based, distribusi merata)
+                        cocok untuk data skewed seperti Dataset4.
+        use_qcut=False: pakai pd.cut (equal-width, default untuk dataset lain).
+        """
         df_d = df.copy()
         for col in df_d.select_dtypes(include=[np.number]).columns:
             labels = [f"{col}_L", f"{col}_M", f"{col}_H"]
             try:
-                res, bins = pd.cut(df_d[col], bins=self.num_intervals, labels=labels, retbins=True)
-                df_d[col] = res
-                self.intervals[col] = bins.tolist()
-            except:
-                df_d[col] = labels[0]
+                if use_qcut:
+                    res = pd.qcut(df_d[col], q=3, labels=labels, duplicates='drop')
+                    q_vals = df_d[col].quantile([0, 1/3, 2/3, 1]).tolist()
+                    self.intervals[col] = q_vals
+                else:
+                    res, bins = pd.cut(df_d[col], bins=self.num_intervals, labels=labels, retbins=True)
+                    self.intervals[col] = bins.tolist()
+                df_d[col] = res.astype(str)
+            except Exception:
+                df_d[col] = labels[1]  # fallback ke _M
                 self.intervals[col] = []
         return df_d
 
-    def generate_itemsets(self, df_d):
+    def generate_itemsets(self, df_d, target_col=None):
         n = len(df_d)
         min_count = int(np.ceil(self.min_support * n))
 
@@ -443,8 +464,10 @@ class AISAlgorithm:
         itemsets = {1: items_count}
 
         # 2-itemsets: hitung support aktual dari data
-        target_keys = [k for k in items_count if k.startswith("Disease=")]
-        feat_keys   = [k for k in items_count if not k.startswith("Disease=")]
+        # Deteksi target keys secara dinamis berdasarkan nama kolom target
+        target_prefix = f"{target_col}=" if target_col else "Disease="
+        target_keys = [k for k in items_count if k.startswith(target_prefix)]
+        feat_keys   = [k for k in items_count if not k.startswith(target_prefix)]
 
         def key_to_mask(key, df_d):
             col, val = key.split("=", 1)
@@ -452,17 +475,24 @@ class AISAlgorithm:
 
         itemsets_2 = {}
 
-        # Fitur ↔ Disease (penting untuk prediksi label penyakit)
+        # Fitur ↔ Target (penting untuk prediksi label)
+        # Gunakan threshold lebih rendah agar dataset dengan 3-bin fitur × 3-label target
+        # (max support ~1/9 ≈ 11%) tetap bisa membentuk rules walau min_support=0.15
+        target_min_count = max(2, int(np.ceil(self.min_support * 0.5 * n)))
         for fk in feat_keys:
             for dk in target_keys:
                 mask = key_to_mask(fk, df_d) & key_to_mask(dk, df_d)
                 cnt = int(mask.sum())
-                if cnt >= min_count:
+                if cnt >= target_min_count:
                     itemsets_2[f"{fk} AND {dk}"] = cnt
 
         # Fitur ↔ Fitur
+        # Jika target_col=None (Dataset4): bandingkan SEMUA pasangan cross-kolom
+        # agar Date_From_* × Date_To_* tercakup (items dari kolom berbeda mungkin jauh di list)
+        # Jika ada target: batasi +3 tetangga untuk efisiensi
+        feat_limit = len(feat_keys) if target_col is None else 3
         for i in range(len(feat_keys)):
-            for j in range(i+1, min(i+3, len(feat_keys))):
+            for j in range(i+1, min(i+feat_limit, len(feat_keys))):
                 mask = key_to_mask(feat_keys[i], df_d) & key_to_mask(feat_keys[j], df_d)
                 cnt = int(mask.sum())
                 if cnt >= min_count:
@@ -511,21 +541,39 @@ class AISAlgorithm:
             processed_df[target_col] = df[target_col].values
 
         n = len(processed_df)
-        df_d = self.discretize_continuous(processed_df)
-        itemsets = self.generate_itemsets(df_d)
+        # Dataset4 (target=None) datanya sangat skewed → pakai qcut agar bin seimbang
+        use_qcut = (target_col is None)
+        df_d = self.discretize_continuous(processed_df, use_qcut=use_qcut)
+        itemsets = self.generate_itemsets(df_d, target_col=target_col)
         items_count = itemsets.get(1, {})
         self.rules = self.generate_rules(itemsets, n, items_count)
         return self
 
-    def predict(self, input_conditions):
-        """Cocokkan input_conditions dengan rules, return best match."""
+    def predict(self, input_conditions, target_labels=None):
+        """
+        Cocokkan input_conditions dengan rules, return best match.
+        Prioritaskan rules yang consequent-nya label target (Low/Medium/High atau nama penyakit).
+        Jika target_labels=None (Dataset4): fallback ke top rules global jika tidak ada match.
+        """
         matched = []
         for rule in self.rules:
             conds = [c.strip() for c in rule['antecedent'].split('AND')]
             if all(c in input_conditions for c in conds):
                 matched.append(rule)
         if not matched:
+            # [Dataset4/no-target fallback] kembalikan top rules global agar user
+            # tetap mendapat informasi rules yang tersedia
+            if target_labels is None and self.rules:
+                return sorted(self.rules, key=lambda x: x['confidence'], reverse=True)[:5]
             return None
+        # Prioritaskan consequent berupa label target jika tersedia
+        if target_labels:
+            def cons_label(r):
+                c = r['consequent']
+                return c.split('=', 1)[1] if '=' in c else c
+            target_matched = [r for r in matched if cons_label(r) in target_labels]
+            if target_matched:
+                return sorted(target_matched, key=lambda x: x['confidence'], reverse=True)
         return sorted(matched, key=lambda x: x['confidence'], reverse=True)
 
     def get_summary(self):
@@ -578,7 +626,7 @@ class SetOrientedMiningModel:
                 if pd.isna(val):
                     continue
                 if col == target_col:
-                    tags.append(f"Disease={val}")
+                    tags.append(f"Target={val}")
                 elif col in medians:
                     tags.append(f"{col}_HIGH" if val >= medians[col] else f"{col}_LOW")
                 else:
@@ -610,15 +658,17 @@ class SetOrientedMiningModel:
             self.itemsets_count = len(freq_items)
 
             # Pisahkan fitur dan label
-            disease_items = {k: v for k, v in freq_items.items() if k.startswith('Disease=')}
-            feat_items    = {k: v for k, v in freq_items.items() if not k.startswith('Disease=')}
+            disease_items = {k: v for k, v in freq_items.items() if k.startswith('Target=')}
+            feat_items    = {k: v for k, v in freq_items.items() if not k.startswith('Target=')}
 
             self.rules        = []
             self.disease_rules = []
 
-            # 2-itemset: fitur ↔ Disease (untuk prediksi label penyakit)
-            # Turunkan threshold agar lebih banyak disease rules ter-generate
+            # 2-itemset: fitur ↔ Target (untuk prediksi label)
+            # Turunkan threshold support agar dataset 3-bin × 3-label (max ~1/9)
+            # tetap bisa membentuk rules walau global min_support=0.2
             disease_threshold = self.min_confidence * 0.5
+            target_min_count  = max(2, int(np.ceil(self.min_support * 0.5 * n)))
             for fk, f_cnt in feat_items.items():
                 for dk, d_cnt in disease_items.items():
                     cur.execute('''
@@ -627,13 +677,13 @@ class SetOrientedMiningModel:
                         WHERE a.item = ? AND b.item = ?
                     ''', (fk, dk))
                     pair_cnt = cur.fetchone()[0]
-                    if pair_cnt < min_count:
+                    if pair_cnt < target_min_count:
                         continue
                     sup     = pair_cnt / n
                     conf_fd = pair_cnt / f_cnt
                     if conf_fd >= disease_threshold:
                         d_sup        = d_cnt / n
-                        display_cons = dk.replace('Disease=', '') if dk.startswith('Disease=') else dk
+                        display_cons = dk.replace('Target=', '') if dk.startswith('Target=') else dk
                         rule = {
                             'antecedent': fk,
                             'consequent': display_cons,
@@ -690,26 +740,31 @@ class SetOrientedMiningModel:
 
 DISEASE_LABELS = {'Bacterial leaf blight', 'Brown spot', 'Leaf smut'}
 
-def pick_disease_prediction(model, input_tags, model_name=''):
+def pick_disease_prediction(model, input_tags, model_name='', target_labels=None):
     """
-    Pilih rules prediksi yang consequent-nya adalah label penyakit.
-    Selalu mengembalikan list terurut confidence DESC dengan consequent
-    berupa nama penyakit (bukan nama fitur).
+    Pilih rules prediksi yang consequent-nya adalah label target.
+    target_labels: set of valid label strings, atau None = Dataset4 (pure feature-feature).
 
     Urutan prioritas:
-      1. disease_rules (fitur → Disease) yang antecedent-nya ada di input_tags
+      1. disease_rules (fitur -> Target) yang antecedent-nya ada di input_tags
       2. Semua disease_rules terurut confidence (tanpa filter input)
-      3. Semua rules biasa yang consequent-nya label penyakit
-      4. Fallback: semua rules yang antecedent-nya ada di input_tags
-
-    Untuk AprioriTid: gunakan predict_tid() langsung karena scoring berbeda.
+      3. Semua rules biasa yang consequent-nya label target yang antecedent cocok
+      4. Semua rules yang antecedent-nya ada di input_tags (fitur-fitur biasa)
+      5. [Dataset4/no-target fallback] Semua rules global terurut confidence
     """
-    disease_labels = DISEASE_LABELS
+    # Dataset4 (target_labels=None): tidak ada label target khusus,
+    # semua rules adalah fitur-fitur — skip valid_labels filter
+    no_target_mode = (target_labels is None)
+    valid_labels = target_labels if not no_target_mode else DISEASE_LABELS
 
-    # AprioriTid — sudah mengembalikan list dengan Disease consequent
+    # AprioriTid — sudah mengembalikan list dengan label consequent
     if model_name == 'AprioriTid':
         results = model.predict_tid(input_tags)
-        disease = [r for r in results if r['consequent'] in disease_labels]
+        if no_target_mode:
+            return results if results else sorted(
+                model.rules, key=lambda x: x['confidence'], reverse=True
+            )[:5]
+        disease = [r for r in results if r['consequent'] in valid_labels]
         return disease if disease else results
 
     # Untuk Apriori dan SetOrientedMining
@@ -727,19 +782,28 @@ def pick_disease_prediction(model, input_tags, model_name=''):
     if disease_rules:
         return sorted(disease_rules, key=lambda x: x['confidence'], reverse=True)
 
-    # 3. Fallback: rules biasa dengan consequent = penyakit
-    from_all = sorted(
-        [r for r in model.rules if r['consequent'] in disease_labels and r['antecedent'] in input_tags],
-        key=lambda x: x['confidence'], reverse=True
-    )
-    if from_all:
-        return from_all
+    # 3. Fallback: rules biasa dengan consequent = label target yang antecedent cocok
+    if not no_target_mode:
+        from_all = sorted(
+            [r for r in model.rules if r['consequent'] in valid_labels and r['antecedent'] in input_tags],
+            key=lambda x: x['confidence'], reverse=True
+        )
+        if from_all:
+            return from_all
 
-    # 4. Last resort: semua rules yang antecedent cocok
-    return sorted(
+    # 4. Semua rules yang antecedent-nya ada di input_tags
+    matched_any = sorted(
         [r for r in model.rules if r['antecedent'] in input_tags],
         key=lambda x: x['confidence'], reverse=True
     )
+    if matched_any:
+        return matched_any
+
+    # 5. [Dataset4/no-target fallback] kembalikan top rules global
+    if no_target_mode and model.rules:
+        return sorted(model.rules, key=lambda x: x['confidence'], reverse=True)[:5]
+
+    return []
 
 
 # =====================================================================
@@ -784,8 +848,46 @@ DATASET_TARGETS = {
     'Dataset1': 'Disease',
     'Dataset2': 'Growth_Milestone',
     'Dataset3': 'Crop_Yield',
-    'Dataset4': 'Value From',
+    'Dataset4': None,   # pure association: hanya Date From & Date To, tidak ada target prediksi
 }
+
+# Kolom target yang NUMERIK dan perlu didiskretisasi → Low/Medium/High sebelum fit
+NUMERIC_TARGET_DATASETS = {'Dataset3'}
+
+def discretize_target(df, target_col, dataset_name=None):
+    """
+    Jika target adalah numerik kontinu (Dataset3/Dataset4), diskretisasi
+    menjadi 'Low', 'Medium', 'High' menggunakan pd.qcut (quantile-based).
+    Kembalikan df baru dengan kolom target sudah berupa string label.
+    """
+    if dataset_name not in NUMERIC_TARGET_DATASETS:
+        return df
+    if target_col not in df.columns:
+        return df
+    if not pd.api.types.is_numeric_dtype(df[target_col]):
+        return df
+    df = df.copy()
+    try:
+        df[target_col] = pd.qcut(
+            df[target_col], q=3, labels=['Low', 'Medium', 'High'], duplicates='drop'
+        ).astype(str)
+    except Exception:
+        # Fallback: cut sama rata
+        df[target_col] = pd.cut(
+            df[target_col], bins=3, labels=['Low', 'Medium', 'High']
+        ).astype(str)
+    return df
+
+def get_target_labels(dataset_name):
+    """Kembalikan set label yang valid untuk dataset tersebut."""
+    if dataset_name in NUMERIC_TARGET_DATASETS:
+        return {'Low', 'Medium', 'High'}
+    if dataset_name == 'Dataset1':
+        return {'Bacterial leaf blight', 'Brown spot', 'Leaf smut'}
+    if dataset_name == 'Dataset4':
+        return None  # pure feature-feature rules, tidak ada label target
+    # Dataset2: Growth_Milestone — biarkan dinamis
+    return None  # None = pakai semua consequent
 
 def load_dataset(dataset_name):
     if dataset_name not in DATASET_PATHS:
@@ -796,6 +898,27 @@ def load_dataset(dataset_name):
     if not os.path.exists(path):
         return None, None
     df = pd.read_csv(path)
+
+    # ── Dataset4: hanya Date From dan Date To (numerik), tidak ada target ──
+    if dataset_name == 'Dataset4':
+        df = df[['Date From', 'Date To']].dropna()
+        df = df.rename(columns={'Date From': 'Date_From', 'Date To': 'Date_To'})
+        return df, list(df.columns)
+
+    # ── Rename kolom Dataset3 agar cocok dengan config HTML ──
+    if dataset_name == 'Dataset3':
+        df = df.rename(columns={
+            'Fertilizer_Used(tons)':      'Fertilizer_Used',
+            'Pesticide_Used(kg)':         'Pesticide_Use',
+            'Yield(tons)':                'Crop_Yield',
+            'Water_Usage(cubic meters)':  'Water_Usage',
+            'Farm_Area(acres)':           'Farm_Area',
+        })
+
+    # Diskretisasi target numerik jika diperlukan (Dataset3/Dataset4)
+    target_col = DATASET_TARGETS.get(dataset_name)
+    if target_col:
+        df = discretize_target(df, target_col, dataset_name)
     return df, list(df.columns)
 
 def run_model(model_name, df, target_col):
@@ -882,33 +1005,37 @@ def predict():
         return jsonify({'status': 'error', 'message': f'Dataset {dataset_name} tidak ditemukan'})
 
     target = data.get('target') or DATASET_TARGETS.get(dataset_name, features[0])
+    target_labels = get_target_labels(dataset_name)
 
     # ── AIS ──────────────────────────────────────────────────────────
     if model_name == 'AgrawalImielinskiSwami':
         m = AISAlgorithm()
         m.fit(df, target)
-        matched = m.predict(conditions)  # returns list or None
+        matched = m.predict(conditions, target_labels=target_labels)  # returns list or None
 
     # ── Apriori ──────────────────────────────────────────────────────
     elif model_name == 'Apriori':
         m = AprioriModel()
         m.fit(df, target)
-        input_tags = set(c.split('=',1)[1] if '=' in c else c for c in conditions)
-        matched = pick_disease_prediction(m, input_tags, 'Apriori')
+        input_tags = set(c.split('=',1)[1] for c in conditions
+                         if target is None or not c.startswith(target + '='))
+        matched = pick_disease_prediction(m, input_tags, 'Apriori', target_labels)
 
     # ── AprioriTid ────────────────────────────────────────────────
     elif model_name == 'AprioriTid':
         m = AprioriTidModel()
         m.fit(df, target)
-        input_tags = set(c.split('=',1)[1] if '=' in c else c for c in conditions)
-        matched = pick_disease_prediction(m, input_tags, 'AprioriTid')
+        input_tags = set(c.split('=',1)[1] for c in conditions
+                         if target is None or not c.startswith(target + '='))
+        matched = pick_disease_prediction(m, input_tags, 'AprioriTid', target_labels)
 
     # ── SetOrientedMining ─────────────────────────────────────────────
     elif model_name == 'SetOrientedMining':
         m = SetOrientedMiningModel()
         m.fit(df, target)
-        input_tags = set(c.split('=',1)[1] if '=' in c else c for c in conditions)
-        matched = pick_disease_prediction(m, input_tags, 'SetOrientedMining')
+        input_tags = set(c.split('=',1)[1] for c in conditions
+                         if target is None or not c.startswith(target + '='))
+        matched = pick_disease_prediction(m, input_tags, 'SetOrientedMining', target_labels)
 
     else:
         return jsonify({'status': 'error', 'message': f'Model {model_name} tidak dikenal'})
@@ -1005,7 +1132,7 @@ def predict_image():
             conditions.append(f"{col}={col}_{suffix}")
         all_matched = m.predict(conditions) or []
         # Ambil rule yang consequent-nya mengandung label penyakit
-        # (format: 'Disease=Bacterial leaf blight')
+        # (format: 'Target=Bacterial leaf blight')
         matched = [r for r in all_matched if any(d in r['consequent'] for d in disease_labels)]
         if not matched:
             matched = all_matched
@@ -1045,9 +1172,9 @@ def predict_image():
         })
 
     best = matched[0]
-    # Strip 'Disease=' prefix jika ada
+    # Strip 'Target=' prefix jika ada
     raw_pred = best['consequent']
-    prediction = raw_pred.replace('Disease=', '') if raw_pred.startswith('Disease=') else raw_pred
+    prediction = raw_pred.replace('Target=', '') if raw_pred.startswith('Target=') else raw_pred
     return jsonify({
         'status':     'success',
         'model':      model_name,

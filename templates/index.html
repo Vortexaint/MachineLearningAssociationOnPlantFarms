@@ -358,33 +358,32 @@ const DS_CONFIG_AIS = {
   },
   Dataset3: {
     label: 'Agriculture & Farming', target: 'Crop_Yield',
-    hint: 'Data performa panen. Interval AIS: _L / _M / _H.',
-    predHint: 'Contoh: Fertilizer_Used=..._H + Crop_Yield=..._H → multi-cropping',
+    hint: 'Data performa panen. Interval AIS: _L / _M / _H. Prediksi → Crop_Yield (Low / Medium / High).',
+    predHint: 'Contoh: Fertilizer_Used=Fertilizer_Used_H + Farm_Area=Farm_Area_H → Crop_Yield High',
     groups: [
-      { label: 'Crop_Yield',      tags: ['Crop_Yield=Crop_Yield_L','Crop_Yield=Crop_Yield_M','Crop_Yield=Crop_Yield_H'] },
       { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_L','Fertilizer_Used=Fertilizer_Used_M','Fertilizer_Used=Fertilizer_Used_H'] },
-      { label: 'Rainfall',        tags: ['Rainfall=Rainfall_L','Rainfall=Rainfall_M','Rainfall=Rainfall_H'] },
-      { label: 'Temperature',     tags: ['Temperature=Temperature_L','Temperature=Temperature_M','Temperature=Temperature_H'] },
       { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_L','Pesticide_Use=Pesticide_Use_M','Pesticide_Use=Pesticide_Use_H'] },
+      { label: 'Farm_Area',       tags: ['Farm_Area=Farm_Area_L','Farm_Area=Farm_Area_M','Farm_Area=Farm_Area_H'] },
+      { label: 'Water_Usage',     tags: ['Water_Usage=Water_Usage_L','Water_Usage=Water_Usage_M','Water_Usage=Water_Usage_H'] },
     ],
     examples: [
-      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_H','Fertilizer_Used=Fertilizer_Used_H'] },
-      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_L','Fertilizer_Used=Fertilizer_Used_L'] },
-      { label: '→ Medium Yield',                conds: ['Rainfall=Rainfall_M','Temperature=Temperature_M'] },
+      { label: '→ High Yield',   conds: ['Fertilizer_Used=Fertilizer_Used_H','Farm_Area=Farm_Area_H'] },
+      { label: '→ Low Yield',    conds: ['Fertilizer_Used=Fertilizer_Used_L','Farm_Area=Farm_Area_L'] },
+      { label: '→ Medium Yield', conds: ['Pesticide_Use=Pesticide_Use_M','Water_Usage=Water_Usage_M'] },
     ]
   },
   Dataset4: {
-    label: 'Agricultural Heritage', target: 'Value From',
-    hint: 'Data historis pertanian Seshat. Interval AIS: _L / _M / _H.',
-    predHint: 'Contoh: Variable=Variable_H + NGA=NGA_M → Value To tinggi',
+    label: 'Agricultural Heritage', target: null,
+    hint: 'Data historis pertanian Seshat. Hanya Date_From ↔ Date_To. Interval AIS: _L / _M / _H. Pure feature-feature association rules.',
+    predHint: 'Contoh: Date_From=Date_From_H → Date_To_H (periode panjang)',
     groups: [
-      { label: 'Variable', tags: ['Variable=Variable_L','Variable=Variable_M','Variable=Variable_H'] },
-      { label: 'NGA',      tags: ['NGA=NGA_L','NGA=NGA_M','NGA=NGA_H'] },
-      { label: 'Unit',     tags: ['Unit=Unit_L','Unit=Unit_M','Unit=Unit_H'] },
+      { label: 'Date_From', tags: ['Date_From=Date_From_L','Date_From=Date_From_M','Date_From=Date_From_H'] },
+      { label: 'Date_To',   tags: ['Date_To=Date_To_L','Date_To=Date_To_M','Date_To=Date_To_H'] },
     ],
     examples: [
-      { label: '→ High Heritage Value', conds: ['Variable=Variable_H','NGA=NGA_M'] },
-      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_L','Unit=Unit_L'] },
+      { label: '→ Date_To High',   conds: ['Date_From=Date_From_H'] },
+      { label: '→ Date_To Low',    conds: ['Date_From=Date_From_L'] },
+      { label: '→ Date_From High', conds: ['Date_To=Date_To_H'] },
     ]
   }
 };
@@ -427,34 +426,32 @@ const DS_CONFIG_APRIORI = {
   },
   Dataset3: {
     label: 'Agriculture & Farming', target: 'Crop_Yield',
-    hint: 'Data performa panen. Interval Apriori (median split): _HIGH / _LOW.',
-    predHint: 'Contoh: Fertilizer_Used=..._HIGH + Crop_Yield=..._HIGH → multi-cropping',
+    hint: 'Data performa panen. Interval Apriori (median split): _HIGH / _LOW. Prediksi → Crop_Yield (Low / Medium / High).',
+    predHint: 'Contoh: Fertilizer_Used=Fertilizer_Used_HIGH + Farm_Area=Farm_Area_HIGH → Crop_Yield High',
     groups: [
-      { label: 'Crop_Yield',      tags: ['Crop_Yield=Crop_Yield_HIGH','Crop_Yield=Crop_Yield_LOW'] },
       { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_HIGH','Fertilizer_Used=Fertilizer_Used_LOW'] },
-      { label: 'Rainfall',        tags: ['Rainfall=Rainfall_HIGH','Rainfall=Rainfall_LOW'] },
-      { label: 'Temperature',     tags: ['Temperature=Temperature_HIGH','Temperature=Temperature_LOW'] },
       { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_HIGH','Pesticide_Use=Pesticide_Use_LOW'] },
+      { label: 'Farm_Area',       tags: ['Farm_Area=Farm_Area_HIGH','Farm_Area=Farm_Area_LOW'] },
+      { label: 'Water_Usage',     tags: ['Water_Usage=Water_Usage_HIGH','Water_Usage=Water_Usage_LOW'] },
     ],
     examples: [
-      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_HIGH','Fertilizer_Used=Fertilizer_Used_HIGH'] },
-      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_LOW','Fertilizer_Used=Fertilizer_Used_LOW'] },
-      { label: '→ High Rainfall + Yield',       conds: ['Rainfall=Rainfall_HIGH','Crop_Yield=Crop_Yield_HIGH'] },
+      { label: '→ High Yield', conds: ['Fertilizer_Used=Fertilizer_Used_HIGH','Farm_Area=Farm_Area_HIGH'] },
+      { label: '→ Low Yield',  conds: ['Fertilizer_Used=Fertilizer_Used_LOW','Farm_Area=Farm_Area_LOW'] },
+      { label: '→ High Pesticide', conds: ['Pesticide_Use=Pesticide_Use_HIGH','Water_Usage=Water_Usage_HIGH'] },
     ]
   },
   Dataset4: {
-    label: 'Agricultural Heritage', target: 'Value From',
-    hint: 'Data historis pertanian Seshat. Interval Apriori (median split): _HIGH / _LOW.',
-    predHint: 'Contoh: Variable=Variable_HIGH + NGA=NGA_LOW → Value To tinggi',
+    label: 'Agricultural Heritage', target: null,
+    hint: 'Data historis pertanian Seshat. Hanya Date_From ↔ Date_To. Interval Apriori (median split): _HIGH / _LOW. Pure feature-feature association rules.',
+    predHint: 'Contoh: Date_From=Date_From_HIGH → Date_To_HIGH (periode panjang)',
     groups: [
-      { label: 'Variable',   tags: ['Variable=Variable_HIGH','Variable=Variable_LOW'] },
-      { label: 'NGA',        tags: ['NGA=NGA_HIGH','NGA=NGA_LOW'] },
-      { label: 'Unit',       tags: ['Unit=Unit_HIGH','Unit=Unit_LOW'] },
-      { label: 'Value From', tags: ['Value From=Value From_HIGH','Value From=Value From_LOW'] },
+      { label: 'Date_From', tags: ['Date_From=Date_From_HIGH','Date_From=Date_From_LOW'] },
+      { label: 'Date_To',   tags: ['Date_To=Date_To_HIGH','Date_To=Date_To_LOW'] },
     ],
     examples: [
-      { label: '→ High Heritage Value', conds: ['Variable=Variable_HIGH','NGA=NGA_LOW'] },
-      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_LOW','Unit=Unit_LOW'] },
+      { label: '→ Date_To High',  conds: ['Date_From=Date_From_HIGH'] },
+      { label: '→ Date_To Low',   conds: ['Date_From=Date_From_LOW'] },
+      { label: '→ Date_From High', conds: ['Date_To=Date_To_HIGH'] },
     ]
   }
 };
@@ -501,36 +498,34 @@ const DS_CONFIG_APRIORITID = {
   },
   Dataset3: {
     label: 'Agriculture & Farming', target: 'Crop_Yield',
-    hint: 'Data performa panen. AprioriTid diskritisasi: _H (≥ median), _L (< median).',
-    predHint: 'Contoh: Fertilizer_Used_H + Rainfall_H → Crop_Yield_H (multi-cropping)',
+    hint: 'Data performa panen. AprioriTid diskritisasi: _H (≥ median), _L (< median). Prediksi → Crop_Yield (Low / Medium / High).',
+    predHint: 'Contoh: Fertilizer_Used_H + Farm_Area_H → Crop_Yield High',
     badge: '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>',
     groups: [
-      { label: 'Crop_Yield',       tags: ['Crop_Yield=Crop_Yield_H','Crop_Yield=Crop_Yield_L'] },
-      { label: 'Fertilizer_Used',  tags: ['Fertilizer_Used=Fertilizer_Used_H','Fertilizer_Used=Fertilizer_Used_L'] },
-      { label: 'Rainfall',         tags: ['Rainfall=Rainfall_H','Rainfall=Rainfall_L'] },
-      { label: 'Temperature',      tags: ['Temperature=Temperature_H','Temperature=Temperature_L'] },
-      { label: 'Pesticide_Use',    tags: ['Pesticide_Use=Pesticide_Use_H','Pesticide_Use=Pesticide_Use_L'] },
+      { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_H','Fertilizer_Used=Fertilizer_Used_L'] },
+      { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_H','Pesticide_Use=Pesticide_Use_L'] },
+      { label: 'Farm_Area',       tags: ['Farm_Area=Farm_Area_H','Farm_Area=Farm_Area_L'] },
+      { label: 'Water_Usage',     tags: ['Water_Usage=Water_Usage_H','Water_Usage=Water_Usage_L'] },
     ],
     examples: [
-      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_H','Fertilizer_Used=Fertilizer_Used_H'] },
-      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_L','Fertilizer_Used=Fertilizer_Used_L'] },
-      { label: '→ High Rainfall + Yield',       conds: ['Rainfall=Rainfall_H','Crop_Yield=Crop_Yield_H'] },
+      { label: '→ High Yield', conds: ['Fertilizer_Used=Fertilizer_Used_H','Farm_Area=Farm_Area_H'] },
+      { label: '→ Low Yield',  conds: ['Fertilizer_Used=Fertilizer_Used_L','Farm_Area=Farm_Area_L'] },
+      { label: '→ High Pesticide', conds: ['Pesticide_Use=Pesticide_Use_H','Water_Usage=Water_Usage_H'] },
     ]
   },
   Dataset4: {
-    label: 'Agricultural Heritage', target: 'Value From',
-    hint: 'Data historis pertanian Seshat. AprioriTid diskritisasi: _H (≥ median), _L (< median).',
-    predHint: 'Contoh: Variable_H + NGA_L → Value_To_H (produktivitas historis tinggi)',
+    label: 'Agricultural Heritage', target: null,
+    hint: 'Data historis pertanian Seshat. Hanya Date_From ↔ Date_To. AprioriTid diskritisasi: _H (≥ median), _L (< median). Pure feature-feature rules via TID co-occurrence.',
+    predHint: 'Contoh: Date_From_H → Date_To_H (periode historis panjang)',
     badge: '<span style="background:rgba(100,120,200,0.12);color:#2a4a9a;border-radius:4px;padding:2px 8px;font-size:11px;font-weight:600;letter-spacing:0.06em;margin-left:8px;">Format: _H / _L · TID Score</span>',
     groups: [
-      { label: 'Variable',    tags: ['Variable=Variable_H','Variable=Variable_L'] },
-      { label: 'NGA',         tags: ['NGA=NGA_H','NGA=NGA_L'] },
-      { label: 'Unit',        tags: ['Unit=Unit_H','Unit=Unit_L'] },
-      { label: 'Value From',  tags: ['Value From=Value From_H','Value From=Value From_L'] },
+      { label: 'Date_From', tags: ['Date_From=Date_From_H','Date_From=Date_From_L'] },
+      { label: 'Date_To',   tags: ['Date_To=Date_To_H','Date_To=Date_To_L'] },
     ],
     examples: [
-      { label: '→ High Heritage Value', conds: ['Variable=Variable_H','NGA=NGA_L'] },
-      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_L','Unit=Unit_L'] },
+      { label: '→ Date_To High',  conds: ['Date_From=Date_From_H'] },
+      { label: '→ Date_To Low',   conds: ['Date_From=Date_From_L'] },
+      { label: '→ Date_From High', conds: ['Date_To=Date_To_H'] },
     ]
   }
 };
@@ -574,34 +569,32 @@ const DS_CONFIG_SETORIENTED = {
   },
   Dataset3: {
     label: 'Agriculture & Farming', target: 'Crop_Yield',
-    hint: 'Data performa panen. SetOrientedMining (median split): _HIGH / _LOW.',
-    predHint: 'Contoh: Fertilizer_Used=..._HIGH + Rainfall=..._HIGH → Crop_Yield_HIGH (multi-cropping)',
+    hint: 'Data performa panen. SetOrientedMining (median split): _HIGH / _LOW. Prediksi → Crop_Yield.',
+    predHint: 'Contoh: Fertilizer_Used=Fertilizer_Used_HIGH + Farm_Area=Farm_Area_HIGH → Crop_Yield High',
     groups: [
-      { label: 'Crop_Yield',      tags: ['Crop_Yield=Crop_Yield_HIGH','Crop_Yield=Crop_Yield_LOW'] },
       { label: 'Fertilizer_Used', tags: ['Fertilizer_Used=Fertilizer_Used_HIGH','Fertilizer_Used=Fertilizer_Used_LOW'] },
-      { label: 'Rainfall',        tags: ['Rainfall=Rainfall_HIGH','Rainfall=Rainfall_LOW'] },
-      { label: 'Temperature',     tags: ['Temperature=Temperature_HIGH','Temperature=Temperature_LOW'] },
       { label: 'Pesticide_Use',   tags: ['Pesticide_Use=Pesticide_Use_HIGH','Pesticide_Use=Pesticide_Use_LOW'] },
+      { label: 'Farm_Area',       tags: ['Farm_Area=Farm_Area_HIGH','Farm_Area=Farm_Area_LOW'] },
+      { label: 'Water_Usage',     tags: ['Water_Usage=Water_Usage_HIGH','Water_Usage=Water_Usage_LOW'] },
     ],
     examples: [
-      { label: '→ High Yield / multi-cropping', conds: ['Crop_Yield=Crop_Yield_HIGH','Fertilizer_Used=Fertilizer_Used_HIGH'] },
-      { label: '→ Low Yield / mono-cropping',   conds: ['Rainfall=Rainfall_LOW','Fertilizer_Used=Fertilizer_Used_LOW'] },
-      { label: '→ High Rainfall + Yield',       conds: ['Rainfall=Rainfall_HIGH','Crop_Yield=Crop_Yield_HIGH'] },
+      { label: '→ High Yield', conds: ['Fertilizer_Used=Fertilizer_Used_HIGH','Farm_Area=Farm_Area_HIGH'] },
+      { label: '→ Low Yield',  conds: ['Fertilizer_Used=Fertilizer_Used_LOW','Farm_Area=Farm_Area_LOW'] },
+      { label: '→ High Pesticide + Fertilizer', conds: ['Pesticide_Use=Pesticide_Use_HIGH','Fertilizer_Used=Fertilizer_Used_HIGH'] },
     ]
   },
   Dataset4: {
-    label: 'Agricultural Heritage', target: 'Value From',
-    hint: 'Data historis pertanian Seshat. SetOrientedMining (median split): _HIGH / _LOW.',
-    predHint: 'Contoh: Variable=Variable_HIGH + NGA=NGA_LOW → Value To tinggi',
+    label: 'Agricultural Heritage', target: null,
+    hint: 'Data historis pertanian Seshat. Hanya Date_From ↔ Date_To. SetOrientedMining (median split): _HIGH / _LOW. Pure feature-feature rules via SQLite in-memory.',
+    predHint: 'Contoh: Date_From=Date_From_HIGH → Date_To_HIGH (periode historis panjang)',
     groups: [
-      { label: 'Variable',   tags: ['Variable=Variable_HIGH','Variable=Variable_LOW'] },
-      { label: 'NGA',        tags: ['NGA=NGA_HIGH','NGA=NGA_LOW'] },
-      { label: 'Unit',       tags: ['Unit=Unit_HIGH','Unit=Unit_LOW'] },
-      { label: 'Value From', tags: ['Value From=Value From_HIGH','Value From=Value From_LOW'] },
+      { label: 'Date_From', tags: ['Date_From=Date_From_HIGH','Date_From=Date_From_LOW'] },
+      { label: 'Date_To',   tags: ['Date_To=Date_To_HIGH','Date_To=Date_To_LOW'] },
     ],
     examples: [
-      { label: '→ High Heritage Value', conds: ['Variable=Variable_HIGH','NGA=NGA_LOW'] },
-      { label: '→ Low Heritage Value',  conds: ['Variable=Variable_LOW','Unit=Unit_LOW'] },
+      { label: '→ Date_To High',   conds: ['Date_From=Date_From_HIGH'] },
+      { label: '→ Date_To Low',    conds: ['Date_From=Date_From_LOW'] },
+      { label: '→ Date_From High', conds: ['Date_To=Date_To_HIGH'] },
     ]
   }
 };
