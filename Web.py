@@ -88,9 +88,9 @@ class PreprocessingPipeline:
 
     def fit_transform(self, target_col=None):
         return (self.handle_missing_values()
-                    .handle_outliers()
-                    .label_encoding()
                     .normalization()
+                    .label_encoding()
+                    .handle_outliers()
                     .feature_selection(target_col))
 
 
@@ -131,19 +131,23 @@ class AprioriModel:
         return transactions
 
     def fit(self, df, target_col):
-        # ── Preprocessing: hanya fitur (bukan target) yang di-encode/scale ──
+        # ── Preprocessing: hanya fitur (bukan target) yang diproses ──
+        # Urutan: Missing Value → Normalisasi → Label Encoding → Outlier → Seleksi Fitur
         feat_cols = [c for c in df.columns if c != target_col]
         df_feats = df[feat_cols].copy()
 
-        num_cols = df_feats.select_dtypes(include=[np.number]).columns
-        if len(num_cols) > 0:
-            imp = SimpleImputer(strategy='mean')
-            df_feats[num_cols] = imp.fit_transform(df_feats[num_cols])
+        _pipe = PreprocessingPipeline(df_feats)
+        _pipe.handle_missing_values()
+        _pipe.normalization()
+        _pipe.label_encoding()
+        _pipe.handle_outliers()
+        _pipe.feature_selection()
+        df_feats = _pipe.data
 
-        # Tambahkan kembali kolom target asli (string)
+        # Gabungkan kembali kolom target asli (string), selaraskan index
         processed_df = df_feats.copy()
         if target_col in df.columns:
-            processed_df[target_col] = df[target_col].values
+            processed_df[target_col] = df[target_col].reindex(df_feats.index).values
 
         transactions = self._discretize(processed_df, target_col)
         n = len(transactions)
@@ -244,18 +248,23 @@ class AprioriTidModel:
         return f"{col}_H" if val >= median else f"{col}_L"
 
     def fit(self, df, target_col):
-        # ── Preprocessing: hanya fitur, bukan target ──────────────
+        # ── Preprocessing: hanya fitur (bukan target) yang diproses ──
+        # Urutan: Missing Value → Normalisasi → Label Encoding → Outlier → Seleksi Fitur
         feat_cols = [c for c in df.columns if c != target_col]
-        df_feats  = df[feat_cols].copy()
-        num_cols  = df_feats.select_dtypes(include=[np.number]).columns
-        if len(num_cols) > 0:
-            imp = SimpleImputer(strategy='mean')
-            df_feats[num_cols] = imp.fit_transform(df_feats[num_cols])
+        df_feats = df[feat_cols].copy()
 
-        # Gabungkan kembali kolom target asli (string)
+        _pipe = PreprocessingPipeline(df_feats)
+        _pipe.handle_missing_values()
+        _pipe.normalization()
+        _pipe.label_encoding()
+        _pipe.handle_outliers()
+        _pipe.feature_selection()
+        df_feats = _pipe.data
+
+        # Gabungkan kembali kolom target asli (string), selaraskan index
         processed_df = df_feats.copy()
         if target_col in df.columns:
-            processed_df[target_col] = df[target_col].values
+            processed_df[target_col] = df[target_col].reindex(df_feats.index).values
 
         n = len(processed_df)
         self.n_transactions = n
@@ -417,7 +426,7 @@ class AprioriTidModel:
 # =====================================================================
 
 class AISAlgorithm:
-    def __init__(self, num_intervals=3, min_support=0.15, min_confidence=0.3):
+    def __init__(self, num_intervals=3, min_support=0.15, min_confidence=0.6):
         self.num_intervals = num_intervals
         self.min_support = min_support
         self.min_confidence = min_confidence
@@ -525,20 +534,23 @@ class AISAlgorithm:
         return rules
 
     def fit(self, df, target_col):
-        # Pisahkan fitur numerik dan target (jangan encode target)
+        # ── Preprocessing: hanya fitur (bukan target) yang diproses ──
+        # Urutan: Missing Value → Normalisasi → Label Encoding → Outlier → Seleksi Fitur
         feat_cols = [c for c in df.columns if c != target_col]
         df_feats = df[feat_cols].copy()
 
-        # Hanya impute fitur numerik, tanpa label-encode target
-        num_cols = df_feats.select_dtypes(include=[np.number]).columns
-        if len(num_cols) > 0:
-            imp = SimpleImputer(strategy='mean')
-            df_feats[num_cols] = imp.fit_transform(df_feats[num_cols])
+        _pipe = PreprocessingPipeline(df_feats)
+        _pipe.handle_missing_values()
+        _pipe.normalization()
+        _pipe.label_encoding()
+        _pipe.handle_outliers()
+        _pipe.feature_selection()
+        df_feats = _pipe.data
 
-        # Gabungkan kembali dengan kolom target asli (string label)
+        # Gabungkan kembali kolom target asli (string), selaraskan index
         processed_df = df_feats.copy()
         if target_col in df.columns:
-            processed_df[target_col] = df[target_col].values
+            processed_df[target_col] = df[target_col].reindex(df_feats.index).values
 
         n = len(processed_df)
         # Dataset4 (target=None) datanya sangat skewed → pakai qcut agar bin seimbang
@@ -591,7 +603,7 @@ class AISAlgorithm:
 # =====================================================================
 
 class SetOrientedMiningModel:
-    def __init__(self, min_support=0.2, min_confidence=0.5):
+    def __init__(self, min_support=0.2, min_confidence=0.6):
         self.min_support    = min_support
         self.min_confidence = min_confidence
         self.itemsets_count = 0
@@ -599,25 +611,31 @@ class SetOrientedMiningModel:
         self.disease_rules  = []
 
     def fit(self, df, target_col):
-        # ── Preprocessing: hanya fitur, bukan target ──────────────
+        # ── Preprocessing: hanya fitur (bukan target) yang diproses ──
+        # Urutan: Missing Value → Normalisasi → Label Encoding → Outlier → Seleksi Fitur
         feat_cols = [c for c in df.columns if c != target_col]
-        df_feats  = df[feat_cols].copy()
-        num_cols  = df_feats.select_dtypes(include=[np.number]).columns
-        if len(num_cols) > 0:
-            imp = SimpleImputer(strategy='mean')
-            df_feats[num_cols] = imp.fit_transform(df_feats[num_cols])
+        df_feats = df[feat_cols].copy()
 
-        # Gabungkan kembali kolom target asli (string)
+        _pipe = PreprocessingPipeline(df_feats)
+        _pipe.handle_missing_values()
+        _pipe.normalization()
+        _pipe.label_encoding()
+        _pipe.handle_outliers()
+        _pipe.feature_selection()
+        df_feats = _pipe.data
+
+        # Gabungkan kembali kolom target asli (string), selaraskan index
         processed_df = df_feats.copy()
         if target_col in df.columns:
-            processed_df[target_col] = df[target_col].values
+            processed_df[target_col] = df[target_col].reindex(df_feats.index).values
 
         n = len(processed_df)
         min_count = int(np.ceil(self.min_support * n))
 
         # ── Diskretisasi fitur → _HIGH/_LOW, target tetap string ──
+        feat_cols_processed = [c for c in processed_df.columns if c != target_col]
         medians = {col: processed_df[col].median()
-                   for col in feat_cols
+                   for col in feat_cols_processed
                    if pd.api.types.is_numeric_dtype(processed_df[col])}
 
         def discretize_row(row):
